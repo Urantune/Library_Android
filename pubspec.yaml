@@ -31,3 +31,4 @@ flutter:
   assets:
     - assets/data/authors/trikycuc.json
     - assets/data/authors/urantune.json
+    - assets/data/authors/users.json
