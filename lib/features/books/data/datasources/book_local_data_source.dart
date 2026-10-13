@@ -8,14 +8,24 @@ import '../../domain/entities/book.dart';
 
 class BookLocalDataSource {
   static const _assetPath = 'assets/data/authors/urantune.json';
+  List<Book>? _cache;
 
   Future<List<Book>> getBooks() async {
-    final file = await _localFile();
-    if (!await file.exists()) {
-      await file.parent.create(recursive: true);
-      await file.writeAsString(await rootBundle.loadString(_assetPath), flush: true);
+    if (_cache != null) return List.of(_cache!);
+    final seed = _decode(await rootBundle.loadString(_assetPath));
+    try {
+      final file = await _localFile().timeout(const Duration(seconds: 3));
+      if (!await file.exists()) {
+        await file.parent.create(recursive: true);
+        await file.writeAsString(jsonEncode(seed.map((book) => book.toJson()).toList()), flush: true);
+        _cache = seed;
+      } else {
+        _cache = _decode(await file.readAsString());
+      }
+    } catch (_) {
+      _cache = seed;
     }
-    return _decode(await file.readAsString());
+    return List.of(_cache!);
   }
 
   Future<Book> getBookById(String id) async =>
@@ -49,9 +59,12 @@ class BookLocalDataSource {
   }
 
   Future<void> _save(List<Book> books) async {
-    final file = await _localFile();
-    await file.parent.create(recursive: true);
-    await file.writeAsString(jsonEncode(books.map((book) => book.toJson()).toList()), flush: true);
+    _cache = List.of(books);
+    try {
+      final file = await _localFile().timeout(const Duration(seconds: 3));
+      await file.parent.create(recursive: true);
+      await file.writeAsString(jsonEncode(books.map((book) => book.toJson()).toList()), flush: true);
+    } catch (_) {}
   }
 
   Future<File> _localFile() async {

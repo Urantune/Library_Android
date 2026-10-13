@@ -27,7 +27,7 @@ class _BookListScreenState extends ConsumerState<BookListScreen> {
         ),
         child: books.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => _ErrorView(onRetry: () => ref.invalidate(bookListProvider)),
+          error: (error, _) => _ErrorView(error: error.toString(), onRetry: () => ref.invalidate(bookListProvider)),
           data: (items) {
             final filtered = items.where((book) {
               final text = '${book.title} ${book.author} ${book.category} ${book.isbn}'.toLowerCase();
@@ -259,8 +259,9 @@ class _Info extends StatelessWidget {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.onRetry});
+  const _ErrorView({required this.error, required this.onRetry});
+  final String error;
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) => Center(child: FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Tải lại')));
+  Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Text(error, textAlign: TextAlign.center), const SizedBox(height: 12), FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Tải lại'))]));
 }
