@@ -16,8 +16,11 @@ dependencies:
   go_router: ^18.0.2
   http: ^1.6.0
   shared_preferences: ^2.5.3
+  
+  provider: ^6.1.5+1
+  path_provider: ^2.1.6
+  
   flutter_secure_storage: ^9.2.4
-  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
@@ -29,6 +32,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/data/categories/trongtungcanh.json
     - assets/data/authors/trikycuc.json
     - assets/data/authors/urantune.json
     - assets/data/authors/users.json
