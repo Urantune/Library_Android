@@ -1,21 +1,19 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/author.dart';
 import '../providers/author_provider.dart';
 import 'author_detail_screen.dart';
+import 'author_add_screen.dart';
 
 class AuthorListScreen extends ConsumerStatefulWidget {
   const AuthorListScreen({super.key});
 
   @override
-  ConsumerState<AuthorListScreen> createState() =>
-      _AuthorListScreenState();
+  ConsumerState<AuthorListScreen> createState() => _AuthorListScreenState();
 }
 
-class _AuthorListScreenState
-    extends ConsumerState<AuthorListScreen> {
+class _AuthorListScreenState extends ConsumerState<AuthorListScreen> {
   String keyword = '';
 
   @override
@@ -31,6 +29,31 @@ class _AuthorListScreenState
         ),
         backgroundColor: Colors.white,
         actions: [
+          IconButton(
+            tooltip: 'Thêm tác giả',
+            onPressed: () async {
+              final added = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => const AuthorAddScreen(),
+                ),
+              );
+
+              if (added == true && mounted) {
+                ref.invalidate(authorListProvider);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Thêm tác giả thành công!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(
+              Icons.person_add_alt_1,
+              color: Color(0xFF3157B7),
+            ),
+          ),
           IconButton(
             tooltip: 'Làm mới',
             onPressed: () => ref.invalidate(authorListProvider),
@@ -90,8 +113,7 @@ class _AuthorListScreenState
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 10),
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final author = filtered[index];
                       return _AuthorCard(author: author);
@@ -140,9 +162,7 @@ class _AuthorCard extends StatelessWidget {
                 radius: 27,
                 backgroundColor: const Color(0xFFE6EDFF),
                 child: Text(
-                  author.name.isEmpty
-                      ? '?'
-                      : author.name[0].toUpperCase(),
+                  author.name.isEmpty ? '?' : author.name[0].toUpperCase(),
                   style: const TextStyle(
                     color: Color(0xFF3157B7),
                     fontSize: 21,
@@ -156,9 +176,7 @@ class _AuthorCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      author.name.isEmpty
-                          ? 'Chưa có tên'
-                          : author.name,
+                      author.name.isEmpty ? 'Chưa có tên' : author.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -196,9 +214,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: active
-            ? const Color(0xFFE2F6E9)
-            : const Color(0xFFFFE9E7),
+        color: active ? const Color(0xFFE2F6E9) : const Color(0xFFFFE9E7),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -206,9 +222,7 @@ class _StatusChip extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: active
-              ? const Color(0xFF16713A)
-              : const Color(0xFFB42318),
+          color: active ? const Color(0xFF16713A) : const Color(0xFFB42318),
         ),
       ),
     );
