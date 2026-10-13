@@ -1,0 +1,22 @@
+[
+  {
+    "id": "author-001",
+    "name": "Nguyễn Nhật Ánh",
+    "bio": "Nhà văn Việt Nam nổi tiếng với nhiều tác phẩm dành cho thiếu nhi và tuổi mới lớn.",
+    "birthDate": "1955-05-07",
+    "country": "Việt Nam",
+    "status": "ACTIVE",
+    "createdAt": "2026-09-01T08:30:00",
+    "updatedAt": "2026-10-01T10:15:00"
+  },
+  {
+    "id": "author-002",
+    "name": "Tô Hoài",
+    "bio": "Nhà văn Việt Nam, được biết đến với tác phẩm Dế Mèn phiêu lưu ký.",
+    "birthDate": "1920-09-27",
+    "country": "Việt Nam",
+    "status": "ACTIVE",
+    "createdAt": "2026-09-05T09:00:00",
+    "updatedAt": "2026-09-20T14:30:00"
+  }
+]

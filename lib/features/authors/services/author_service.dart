@@ -1,50 +1,107 @@
-import 'package:dio/dio.dart';
 
-import '../../../core/api_client.dart';
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/author.dart';
 
 class AuthorService {
-  final Dio _dio;
-  AuthorService([Dio? dio]) : _dio = dio ?? ApiClient.dio;
-  // AuthorService(this._dio);
+  static const String _storageKey = 'authors_data';
+  static const String _jsonPath = 'lib/data/trikycuc.json';
 
   Future<List<Author>> getAuthors() async {
-    final response = await _dio.get('/api/authors');
-    final dynamic body = response.data;
+    final prefs = await SharedPreferences.getInstance();
+    final savedJson = prefs.getString(_storageKey);
 
-    final dynamic data =
-        body is Map<String, dynamic> && body.containsKey('data')
-        ? body['data']
-        : body;
+    // Nếu đã có dữ liệu được lưu, sử dụng dữ liệu đó.
+    if (savedJson != null) {
+      return _decodeAuthors(savedJson);
+    }
 
-    final dynamic items = data is Map<String, dynamic> ? data['content'] : data;
+    // Lần đầu chạy: đọc danh sách từ file JSON.
+    final jsonString = await rootBundle.loadString(_jsonPath);
+    final authors = _decodeAuthors(jsonString);
 
-    if (items is! List) {
+    // Lưu bản dữ liệu ban đầu vào SharedPreferences.
+    await _saveAuthors(authors);
+
+    return authors;
+  }
+
+  List<Author> _decodeAuthors(String jsonString) {
+    final decoded = jsonDecode(jsonString);
+
+    if (decoded is! List) {
       throw const FormatException(
-        'API danh sách tác giả phải trả về List hoặc data.content.',
+        'File JSON phải chứa danh sách tác giả.',
       );
     }
 
-    return items
-        .map((item) => Author.fromJson(Map<String, dynamic>.from(item as Map)))
-        .toList();
+    return decoded.map((item) {
+      return Author.fromJson(
+        Map<String, dynamic>.from(item as Map),
+      );
+    }).toList();
+  }
+
+  Future<void> _saveAuthors(List<Author> authors) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final jsonString = jsonEncode(
+      authors.map((author) => author.toJson()).toList(),
+    );
+
+    await prefs.setString(_storageKey, jsonString);
   }
 
   Future<Author> getAuthorById(String id) async {
-    final response = await _dio.get('/api/authors/${Uri.encodeComponent(id)}');
+    final authors = await getAuthors();
 
-    final dynamic body = response.data;
-    final dynamic data =
-        body is Map<String, dynamic> && body.containsKey('data')
-        ? body['data']
-        : body;
+    return authors.firstWhere(
+      (author) => author.id == id,
+      orElse: () => throw Exception('Không tìm thấy tác giả.'),
+    );
+  }
 
-    if (data is! Map) {
-      throw const FormatException(
-        'API chi tiết tác giả phải trả về một object.',
-      );
+  Future<void> createAuthor(Author author) async {
+    final authors = await getAuthors();
+
+    if (authors.any((item) => item.id == author.id)) {
+      throw Exception('ID tác giả đã tồn tại.');
     }
 
-    return Author.fromJson(Map<String, dynamic>.from(data));
+    authors.add(author);
+    await _saveAuthors(authors);
+  }
+
+  Future<void> updateAuthor(Author updatedAuthor) async {
+    final authors = await getAuthors();
+
+    final index = authors.indexWhere(
+      (author) => author.id == updatedAuthor.id,
+    );
+
+    if (index == -1) {
+      throw Exception('Không tìm thấy tác giả.');
+    }
+
+    authors[index] = updatedAuthor;
+    await _saveAuthors(authors);
+  }
+
+  Future<void> deleteAuthor(String id) async {
+    final authors = await getAuthors();
+
+    final index = authors.indexWhere(
+      (author) => author.id == id,
+    );
+
+    if (index == -1) {
+      throw Exception('Không tìm thấy tác giả.');
+    }
+
+    authors.removeAt(index);
+    await _saveAuthors(authors);
   }
 }
