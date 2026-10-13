@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../features/authors/presentation/screens/author_list_screen.dart';
-import '../features/categories/presentation/category_page.dart';
+import '../features/categories/screens/category_screen.dart';
 
 // ───────────────────────── Màu sắc ─────────────────────────
 class AppColors {
@@ -55,7 +55,7 @@ class _DashboardPageState extends State<DashboardPage> {
       case _authorIndex:
         return const AuthorListScreen();
       case _categoryIndex:
-        return CategoryPage(
+        return CategoryScreen(
           onBack: () => setState(() => _selectedIndex = _dashboardIndex),
         );
       default:
