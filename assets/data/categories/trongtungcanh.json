@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "Văn học",
+    "description": "Sách văn học trong và ngoài nước",
+    "bookCount": 120
+  },
+  {
+    "id": 2,
+    "name": "Kỹ năng sống",
+    "description": "Phát triển bản thân",
+    "bookCount": 85
+  },
+  {
+    "id": 3,
+    "name": "Công nghệ",
+    "description": "Lập trình, công nghệ thông tin",
+    "bookCount": 64
+  },
+  {
+    "id": 4,
+    "name": "Kinh tế",
+    "description": "Quản trị, kinh doanh",
+    "bookCount": 42
+  },
+  {
+    "id": 5,
+    "name": "Tiểu thuyết",
+    "description": "Truyện dài, tiểu thuyết",
+    "bookCount": 98
+  }
+]

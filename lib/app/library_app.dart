@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../features/authors/presentation/screens/author_list_screen.dart';
-import '../features/bottom_nav/bottom_nav_bar.dart';
 import '../features/books/presentation/screens/book_list_screen.dart';
 import '../features/categories/presentation/category_page.dart';
 import '../features/notifications/presentation/screens/notification_list_screen.dart';
 import '../features/users/presentation/screens/profile_screen.dart';
 import '../features/users/presentation/screens/user_list_screen.dart';
+import '../features/categories/screens/category_screen.dart';
+
 
 // ───────────────────────── Màu sắc ─────────────────────────
 class AppColors {
@@ -51,32 +52,13 @@ class _DashboardPageState extends State<DashboardPage> {
   static const int _bookIndex = 1;
   static const int _authorIndex = 2;
   static const int _categoryIndex = 3;
-  static const int _userIndex = 5;
 
   int _selectedIndex = _dashboardIndex;
-
-  // Bottom navigation: 0=Home, 1=Người dùng, 2=Thông báo, 3=Hồ sơ
-  int _bottomNavIndex = 0;
-
-  Widget _buildBottomNavPage() {
-    switch (_bottomNavIndex) {
-      case 0:
-        return const DashboardHome();
-      case 1:
-        return const UserListScreen();
-      case 2:
-        return const NotificationListScreen();
-      case 3:
-        return const ProfileScreen();
-      default:
-        return const DashboardHome();
-    }
-  }
 
   Widget _buildPage() {
     switch (_selectedIndex) {
       case _dashboardIndex:
-        return _buildBottomNavPage();
+        return const DashboardHome();
       case _bookIndex:
         return const BookListScreen();
       case _authorIndex:
@@ -85,8 +67,6 @@ class _DashboardPageState extends State<DashboardPage> {
         return CategoryPage(
           onBack: () => setState(() => _selectedIndex = _dashboardIndex),
         );
-      case _userIndex:
-        return const UserListScreen();
       default:
         return const _PlaceholderPage();
     }
@@ -94,20 +74,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Nếu đang ở trang dashboard (index 0), hiển thị bottom nav
-    final showBottomNav = _selectedIndex == _dashboardIndex;
-
     return Scaffold(
       body: Row(
         children: [
           Sidebar(
             selectedIndex: _selectedIndex,
-            onSelected: (i) => setState(() {
-              _selectedIndex = i;
-              if (i == _dashboardIndex) {
-                _bottomNavIndex = 0;
-              }
-            }),
+            onSelected: (i) => setState(() => _selectedIndex = i),
           ),
           Expanded(
             child: Column(
@@ -127,12 +99,6 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-      bottomNavigationBar: showBottomNav
-          ? BottomNavBar(
-              currentIndex: _bottomNavIndex,
-              onTap: (i) => setState(() => _bottomNavIndex = i),
-            )
-          : null,
     );
   }
 }
@@ -202,37 +168,24 @@ class Sidebar extends StatelessWidget {
               children: [
                 Icon(Icons.local_library_rounded, color: Colors.white),
                 SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Thư viện số',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Text(
+                  'Thư viện số',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int i = 0; i < _mainItems.length; i++)
-                    _SidebarTile(
-                      item: _mainItems[i],
-                      selected: selectedIndex == i,
-                      onTap: () => onSelected(i),
-                    ),
-                ],
-              ),
+          for (int i = 0; i < _mainItems.length; i++)
+            _SidebarTile(
+              item: _mainItems[i],
+              selected: selectedIndex == i,
+              onTap: () => onSelected(i),
             ),
-          ),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -275,7 +228,7 @@ class _SidebarTileState extends State<_SidebarTile> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
-    final hovering = _hovered && !selected;
+    final hovering = _hovered && !selected; // chỉ áp dụng cho thẻ chưa chọn
 
     final textColor = selected
         ? AppColors.primary
@@ -296,6 +249,7 @@ class _SidebarTileState extends State<_SidebarTile> {
         duration: _duration,
         curve: _curve,
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        // Thẻ nổi lên nhẹ khi hover
         transform: Matrix4.translationValues(0, hovering ? -2 : 0, 0),
         decoration: BoxDecoration(
           color: selected
@@ -371,7 +325,7 @@ class DashboardHome extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
           const Text(
-            'Xin chào, Nguyễn Văn A',
+            'Xin chào, Nguyễn Văn A 👋',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -405,6 +359,7 @@ class TopBar extends StatelessWidget {
       color: Colors.white,
       child: Row(
         children: [
+          // Ô tìm kiếm
           Expanded(
             child: Align(
               alignment: Alignment.centerLeft,
@@ -430,6 +385,7 @@ class TopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
+          // Thông tin người dùng
           const CircleAvatar(
             radius: 18,
             backgroundColor: Color(0xFFDCE6FA),
@@ -597,7 +553,7 @@ class PopularBooksSection extends StatelessWidget {
   const PopularBooksSection({super.key});
 
   static const _books = [
-    _Book('Dế Mèn phiêu lưu ký', 'Tô Hoài', 30, Color(0xFF7CB342)),
+    _Book('Dế Mèn phiêu lưu ký', 'Nguyễn Nhật Ánh', 30, Color(0xFF7CB342)),
     _Book('Nhà giả kim', 'Paulo Coelho', 28, Color(0xFFE67E22)),
     _Book('Đắc nhân tâm', 'Dale Carnegie', 25, Color(0xFF212121)),
     _Book('Tuổi trẻ đáng giá bao nhiêu', 'Rosie Nguyễn', 20, Color(0xFF1E3A8A)),
@@ -615,15 +571,12 @@ class PopularBooksSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
-                child: Text(
-                  'Sách được mượn nhiều',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
+              const Text(
+                'Sách được mượn nhiều',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
                 ),
               ),
               TextButton.icon(
@@ -666,6 +619,7 @@ class BookCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Bìa sách (placeholder – chưa dùng hình)
           Center(
             child: AspectRatio(
               aspectRatio: 3 / 4,
