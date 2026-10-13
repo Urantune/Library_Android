@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../features/authors/presentation/screens/author_list_screen.dart';
+import '../features/books/presentation/screens/book_list_screen.dart';
 import '../features/categories/screens/category_screen.dart';
+
 
 // ───────────────────────── Màu sắc ─────────────────────────
 class AppColors {
@@ -43,6 +45,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   // Vị trí các mục trong sidebar
   static const int _dashboardIndex = 0;
+  static const int _bookIndex = 1;
   static const int _authorIndex = 2;
   static const int _categoryIndex = 3;
 
@@ -52,6 +55,8 @@ class _DashboardPageState extends State<DashboardPage> {
     switch (_selectedIndex) {
       case _dashboardIndex:
         return const DashboardHome();
+      case _bookIndex:
+        return const BookListScreen();
       case _authorIndex:
         return const AuthorListScreen();
       case _categoryIndex:
