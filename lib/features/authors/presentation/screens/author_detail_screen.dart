@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/author.dart';
+import '../../domain/entities/author.dart';
 import '../providers/author_provider.dart';
 
 class AuthorDetailScreen extends ConsumerWidget {
