@@ -8,7 +8,7 @@ import '../../domain/entities/author.dart';
 
 class AuthorLocalDataSource {
   static const String _storageKey = 'authors_data';
-  static const String _jsonPath = 'assets/data/authors/urantune.json';
+  static const String _jsonPath = 'assets/data/authors/trikycuc.json';
 
   Future<List<Author>> getAuthors() async {
     final prefs = await SharedPreferences.getInstance();
