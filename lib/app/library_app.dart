@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../features/authors/presentation/screens/author_list_screen.dart';
+import '../features/bottom_nav/bottom_nav_bar.dart';
 import '../features/books/presentation/screens/book_list_screen.dart';
-import '../features/categories/presentation/category_page.dart';
 import '../features/notifications/presentation/screens/notification_list_screen.dart';
 import '../features/users/presentation/screens/profile_screen.dart';
 import '../features/users/presentation/screens/user_list_screen.dart';
@@ -52,21 +52,44 @@ class _DashboardPageState extends State<DashboardPage> {
   static const int _bookIndex = 1;
   static const int _authorIndex = 2;
   static const int _categoryIndex = 3;
+  static const int _userIndex = 5;
+  static const int _notificationIndex = 8;
 
   int _selectedIndex = _dashboardIndex;
+
+  // Bottom navigation: 0=Trang chủ, 1=Người dùng, 2=Thông báo, 3=Hồ sơ
+  int _bottomNavIndex = 0;
+
+  Widget _buildBottomNavPage() {
+    switch (_bottomNavIndex) {
+      case 1:
+        return const UserListScreen();
+      case 2:
+        return const NotificationListScreen();
+      case 3:
+        return const ProfileScreen();
+      case 0:
+      default:
+        return const DashboardHome();
+    }
+  }
 
   Widget _buildPage() {
     switch (_selectedIndex) {
       case _dashboardIndex:
-        return const DashboardHome();
+        return _buildBottomNavPage();
       case _bookIndex:
         return const BookListScreen();
       case _authorIndex:
         return const AuthorListScreen();
       case _categoryIndex:
-        return CategoryPage(
+        return CategoryScreen(
           onBack: () => setState(() => _selectedIndex = _dashboardIndex),
         );
+      case _userIndex:
+        return const UserListScreen();
+      case _notificationIndex:
+        return const NotificationListScreen();
       default:
         return const _PlaceholderPage();
     }
@@ -74,12 +97,18 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Bottom nav chỉ hiện khi đang ở Dashboard.
+    final showBottomNav = _selectedIndex == _dashboardIndex;
+
     return Scaffold(
       body: Row(
         children: [
           Sidebar(
             selectedIndex: _selectedIndex,
-            onSelected: (i) => setState(() => _selectedIndex = i),
+            onSelected: (i) => setState(() {
+              _selectedIndex = i;
+              if (i == _dashboardIndex) _bottomNavIndex = 0;
+            }),
           ),
           Expanded(
             child: Column(
@@ -89,7 +118,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     child: KeyedSubtree(
-                      key: ValueKey(_selectedIndex),
+                      key: ValueKey(
+                        showBottomNav ? 'bn$_bottomNavIndex' : 'sb$_selectedIndex',
+                      ),
                       child: _buildPage(),
                     ),
                   ),
@@ -99,6 +130,12 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
+      bottomNavigationBar: showBottomNav
+          ? BottomNavBar(
+              currentIndex: _bottomNavIndex,
+              onTap: (i) => setState(() => _bottomNavIndex = i),
+            )
+          : null,
     );
   }
 }
@@ -168,24 +205,37 @@ class Sidebar extends StatelessWidget {
               children: [
                 Icon(Icons.local_library_rounded, color: Colors.white),
                 SizedBox(width: 10),
-                Text(
-                  'Thư viện số',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Text(
+                    'Thư viện số',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          for (int i = 0; i < _mainItems.length; i++)
-            _SidebarTile(
-              item: _mainItems[i],
-              selected: selectedIndex == i,
-              onTap: () => onSelected(i),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (int i = 0; i < _mainItems.length; i++)
+                    _SidebarTile(
+                      item: _mainItems[i],
+                      selected: selectedIndex == i,
+                      onTap: () => onSelected(i),
+                    ),
+                ],
+              ),
             ),
+          ),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -385,33 +435,53 @@ class TopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          // Thông tin người dùng
-          const CircleAvatar(
-            radius: 18,
-            backgroundColor: Color(0xFFDCE6FA),
-            child: Icon(Icons.person, color: AppColors.primary),
+          // Thông tin người dùng — bấm để mở hồ sơ cá nhân
+          InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+            child: const CircleAvatar(
+              radius: 18,
+              backgroundColor: Color(0xFFDCE6FA),
+              child: Icon(Icons.person, color: AppColors.primary),
+            ),
           ),
           const SizedBox(width: 10),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Nguyễn Văn A',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark),
-              ),
-              Text(
-                'Thủ thư',
-                style: TextStyle(fontSize: 11, color: AppColors.textGrey),
-              ),
-            ],
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Nguyễn Văn A',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark),
+                ),
+                Text(
+                  'Thủ thư',
+                  style: TextStyle(fontSize: 11, color: AppColors.textGrey),
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: 16),
-          const Icon(Icons.notifications_none_rounded,
-              color: AppColors.textDark),
+          // Chuông thông báo — bấm để mở danh sách thông báo
+          InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const NotificationListScreen()),
+            ),
+            child: const Icon(Icons.notifications_none_rounded,
+                color: AppColors.textDark),
+          ),
         ],
       ),
     );
@@ -571,12 +641,15 @@ class PopularBooksSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Sách được mượn nhiều',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
+              const Expanded(
+                child: Text(
+                  'Sách được mượn nhiều',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
                 ),
               ),
               TextButton.icon(
