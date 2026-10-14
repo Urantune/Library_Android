@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,23 +5,33 @@ import '../../domain/entities/author.dart';
 import '../providers/author_provider.dart';
 
 class AuthorAddScreen extends ConsumerStatefulWidget {
-  const AuthorAddScreen({super.key});
+  final Author? author; // Nếu có author thì là chế độ Sửa, không có là Thêm mới
+
+  const AuthorAddScreen({super.key, this.author});
 
   @override
-  ConsumerState<AuthorAddScreen> createState() =>
-      _AuthorAddScreenState();
+  ConsumerState<AuthorAddScreen> createState() => _AuthorAddScreenState();
 }
 
-class _AuthorAddScreenState
-    extends ConsumerState<AuthorAddScreen> {
+class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _countryController = TextEditingController();
-  final _bioController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _countryController;
+  late final TextEditingController _bioController;
 
   DateTime? _birthDate;
-  String _status = 'ACTIVE';
+  late String _status;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.author?.name ?? '');
+    _countryController = TextEditingController(text: widget.author?.country ?? '');
+    _bioController = TextEditingController(text: widget.author?.bio ?? '');
+    _birthDate = widget.author?.birthDate;
+    _status = widget.author?.status ?? 'ACTIVE';
+  }
 
   @override
   void dispose() {
@@ -58,7 +67,7 @@ class _AuthorAddScreenState
     final now = DateTime.now();
 
     final author = Author(
-      id: 'author-${now.microsecondsSinceEpoch}',
+      id: widget.author?.id ?? 'author-${now.microsecondsSinceEpoch}',
       name: _nameController.text.trim(),
       bio: _bioController.text.trim().isEmpty
           ? null
@@ -68,14 +77,21 @@ class _AuthorAddScreenState
           ? null
           : _countryController.text.trim(),
       status: _status,
-      createdAt: now,
+      createdAt: widget.author?.createdAt ?? now,
       updatedAt: now,
     );
 
     try {
-      await ref.read(authorRepositoryProvider).createAuthor(author);
+      if (widget.author == null) {
+        await ref.read(authorRepositoryProvider).createAuthor(author);
+      } else {
+        await ref.read(authorRepositoryProvider).updateAuthor(author);
+      }
 
       ref.invalidate(authorListProvider);
+      if (widget.author != null) {
+        ref.invalidate(authorDetailProvider(widget.author!.id));
+      }
 
       if (!mounted) return;
 
@@ -85,7 +101,7 @@ class _AuthorAddScreenState
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Không thể thêm tác giả: $error'),
+          content: Text('Không thể lưu tác giả: $error'),
           backgroundColor: Colors.red,
         ),
       );
@@ -98,12 +114,14 @@ class _AuthorAddScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.author != null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        title: const Text(
-          'Thêm tác giả',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          isEditing ? 'Sửa thông tin tác giả' : 'Thêm tác giả',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
       ),
@@ -229,7 +247,7 @@ class _AuthorAddScreenState
                         )
                       : const Icon(Icons.save_outlined),
                   label: Text(
-                    _isSaving ? 'Đang lưu...' : 'Lưu tác giả',
+                    _isSaving ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Lưu tác giả'),
                   ),
                 ),
               ),

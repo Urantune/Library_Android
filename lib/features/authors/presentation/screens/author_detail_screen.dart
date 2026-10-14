@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/author.dart';
 import '../providers/author_provider.dart';
+import 'author_add_screen.dart';
 
 class AuthorDetailScreen extends ConsumerWidget {
   final String authorId;
@@ -22,6 +22,86 @@ class AuthorDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Chi tiết tác giả'),
         backgroundColor: Colors.white,
+        actions: [
+          authorAsync.maybeWhen(
+            data: (author) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Sửa thông tin',
+                  icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                  onPressed: () async {
+                    final updated = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => AuthorAddScreen(author: author),
+                      ),
+                    );
+                    if (updated == true && context.mounted) {
+                      ref.invalidate(authorDetailProvider(authorId));
+                      ref.invalidate(authorListProvider);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cập nhật tác giả thành công!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Xóa tác giả',
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Xác nhận xóa'),
+                        content: Text('Bạn có chắc chắn muốn xóa tác giả "${author.name}" không?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Hủy'),
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Xóa'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true && context.mounted) {
+                      try {
+                        await ref.read(authorRepositoryProvider).deleteAuthor(author.id);
+                        ref.invalidate(authorListProvider);
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Đã xóa tác giả thành công!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Không thể xóa tác giả: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ],
       ),
       body: authorAsync.when(
         loading: () => const Center(
@@ -185,13 +265,15 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 125,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ),
+          (label.isNotEmpty)
+              ? SizedBox(
+                  width: 125,
+                  child: Text(
+                    label,
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                )
+              : const SizedBox.shrink(),
           Expanded(
             child: Text(
               value,
@@ -214,10 +296,11 @@ String _formatDate(DateTime? date) {
       '${date.year}';
 }
 
-String _formatDateTime(DateTime? date) {
-  if (date == null) return 'Chưa cập nhật';
-
-  return '${_formatDate(date)} '
-      '${date.hour.toString().padLeft(2, '0')}:'
-      '${date.minute.toString().padLeft(2, '0')}';
+String _formatDateTime(DateTime? dateTime) {
+  if (dateTime == null) return 'Chưa cập nhật';
+  return '${dateTime.hour.toString().padLeft(2, '0')}:'
+      '${dateTime.minute.toString().padLeft(2, '0')} ngày '
+      '${dateTime.day.toString().padLeft(2, '0')}/'
+      '${dateTime.month.toString().padLeft(2, '0')}/'
+      '${dateTime.year}';
 }

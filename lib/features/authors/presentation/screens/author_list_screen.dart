@@ -129,13 +129,13 @@ class _AuthorListScreenState extends ConsumerState<AuthorListScreen> {
   }
 }
 
-class _AuthorCard extends StatelessWidget {
+class _AuthorCard extends ConsumerWidget {
   final Author author;
 
   const _AuthorCard({required this.author});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final active = author.status.toUpperCase() == 'ACTIVE';
 
     return Card(
@@ -190,6 +190,74 @@ class _AuthorCard extends StatelessWidget {
                     _StatusChip(active: active, status: author.status),
                   ],
                 ),
+              ),
+              IconButton(
+                tooltip: 'Sửa thông tin',
+                icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                onPressed: () async {
+                  final updated = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => AuthorAddScreen(author: author),
+                    ),
+                  );
+                  if (updated == true && context.mounted) {
+                    ref.invalidate(authorListProvider);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Cập nhật tác giả thành công!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                },
+              ),
+              IconButton(
+                tooltip: 'Xóa tác giả',
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Xác nhận xóa'),
+                      content: Text('Bạn có chắc chắn muốn xóa tác giả "${author.name}" không?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Hủy'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Xóa'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true && context.mounted) {
+                    try {
+                      await ref.read(authorRepositoryProvider).deleteAuthor(author.id);
+                      ref.invalidate(authorListProvider);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Đã xóa tác giả thành công!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Không thể xóa tác giả: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
               ),
               const Icon(Icons.chevron_right, color: Colors.grey),
             ],
