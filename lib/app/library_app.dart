@@ -7,7 +7,7 @@ import '../features/notifications/presentation/screens/notification_list_screen.
 import '../features/users/presentation/screens/profile_screen.dart';
 import '../features/users/presentation/screens/user_list_screen.dart';
 import '../features/categories/screens/category_screen.dart';
-
+import '../features/publishers/screens/publisher_list_screen.dart';
 
 // ───────────────────────── Màu sắc ─────────────────────────
 class AppColors {
@@ -54,6 +54,7 @@ class _DashboardPageState extends State<DashboardPage> {
   static const int _categoryIndex = 3;
   static const int _userIndex = 5;
   static const int _notificationIndex = 8;
+  static const int _publisherIndex = 4;
 
   int _selectedIndex = _dashboardIndex;
 
@@ -86,6 +87,11 @@ class _DashboardPageState extends State<DashboardPage> {
         return CategoryScreen(
           onBack: () => setState(() => _selectedIndex = _dashboardIndex),
         );
+
+      // Nhà xuất bản
+      case _publisherIndex:
+        return const PublisherListScreen();
+
       case _userIndex:
         return const UserListScreen();
       case _notificationIndex:
@@ -119,7 +125,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     duration: const Duration(milliseconds: 250),
                     child: KeyedSubtree(
                       key: ValueKey(
-                        showBottomNav ? 'bn$_bottomNavIndex' : 'sb$_selectedIndex',
+                        showBottomNav
+                            ? 'bn$_bottomNavIndex'
+                            : 'sb$_selectedIndex',
                       ),
                       child: _buildPage(),
                     ),
@@ -476,8 +484,7 @@ class TopBar extends StatelessWidget {
           InkWell(
             borderRadius: BorderRadius.circular(24),
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (_) => const NotificationListScreen()),
+              MaterialPageRoute(builder: (_) => const NotificationListScreen()),
             ),
             child: const Icon(Icons.notifications_none_rounded,
                 color: AppColors.textDark),
@@ -580,8 +587,8 @@ class StatCard extends StatelessWidget {
                 child: Text(
                   label,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textDark),
+                  style:
+                      const TextStyle(fontSize: 13, color: AppColors.textDark),
                 ),
               ),
             ],

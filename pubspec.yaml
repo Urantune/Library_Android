@@ -36,3 +36,5 @@ flutter:
     - assets/data/authors/trikycuc.json
     - assets/data/authors/urantune.json
     - assets/data/authors/users.json
+    - assets/data/publishers/duykhang.json
+
