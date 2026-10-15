@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../features/notifications/presentation/screens/notification_list_screen.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
+import '../providers/navigation_provider.dart';
 import '../theme/app_colors.dart';
 
 class TopBar extends StatelessWidget {
@@ -15,11 +17,18 @@ class TopBar extends StatelessWidget {
       color: Colors.white,
       child: Row(
         children: [
-          // Nút 3 gạch — mở menu từ bên trái
-          IconButton(
-            tooltip: 'Menu',
-            icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+          // Nút 3 gạch — ẩn đi khi menu mở (lúc đó nút nằm trong sidebar)
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: context
+                    .select<NavigationProvider, bool>((nav) => nav.isMenuOpen)
+                ? 0
+                : 1,
+            child: IconButton(
+              tooltip: 'Menu',
+              icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
+              onPressed: () => context.read<NavigationProvider>().toggleMenu(),
+            ),
           ),
           const SizedBox(width: 8),
           // Ô tìm kiếm

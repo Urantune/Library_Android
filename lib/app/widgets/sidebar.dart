@@ -7,11 +7,13 @@ import 'sidebar_tile.dart';
 class Sidebar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final VoidCallback onClose;
 
   const Sidebar({
     super.key,
     required this.selectedIndex,
     required this.onSelected,
+    required this.onClose,
   });
 
   @override
@@ -21,32 +23,40 @@ class Sidebar extends StatelessWidget {
 
     return Container(
       color: AppColors.sidebar,
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.only(bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Icon(Icons.local_library_rounded, color: Colors.white),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Thư viện số',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+          // Header: logo + nút 3 gạch (đóng menu)
+          SizedBox(
+            height: 72, // bằng chiều cao TopBar
+            child: Padding(
+              padding: const EdgeInsets.only(left: 20, right: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.local_library_rounded, color: Colors.white),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Thư viện số',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  IconButton(
+                    tooltip: 'Đóng menu',
+                    icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                    onPressed: onClose,
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 8),

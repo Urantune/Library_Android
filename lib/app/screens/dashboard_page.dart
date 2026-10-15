@@ -10,7 +10,9 @@ import '../../features/publishers/screens/publisher_list_screen.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
 import '../../features/users/presentation/screens/user_list_screen.dart';
 import '../providers/navigation_provider.dart';
-import '../widgets/app_drawer.dart';
+import '../theme/app_colors.dart';
+import '../widgets/push_menu_layout.dart';
+import '../widgets/sidebar.dart';
 import '../widgets/top_bar.dart';
 import 'dashboard_home.dart';
 import 'placeholder_page.dart';
@@ -60,32 +62,43 @@ class DashboardPage extends StatelessWidget {
     final showBottomNav = nav.showBottomNav;
 
     return Scaffold(
-      // Menu trượt từ trái sang khi bấm nút 3 gạch (hoặc vuốt từ mép trái).
-      drawer: const AppDrawer(),
-      body: Column(
-        children: [
-          const TopBar(),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: KeyedSubtree(
-                key: ValueKey(
-                  showBottomNav
-                      ? 'bn${nav.bottomNavIndex}'
-                      : 'sb${nav.selectedIndex}',
+      // Nền phía sau là màu sidebar → khi nội dung trượt đi sẽ lộ ra liền mạch.
+      backgroundColor: AppColors.sidebar,
+      body: PushMenuLayout(
+        isOpen: nav.isMenuOpen,
+        onClose: nav.closeMenu,
+        menu: SafeArea(
+          child: Sidebar(
+            selectedIndex: nav.selectedIndex,
+            onSelected: nav.selectMenu, // chọn xong tự đóng menu
+            onClose: nav.closeMenu,
+          ),
+        ),
+        child: Column(
+          children: [
+            const TopBar(),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: KeyedSubtree(
+                  key: ValueKey(
+                    showBottomNav
+                        ? 'bn${nav.bottomNavIndex}'
+                        : 'sb${nav.selectedIndex}',
+                  ),
+                  child: _buildPage(nav),
                 ),
-                child: _buildPage(nav),
               ),
             ),
-          ),
-        ],
+            // Bottom nav nằm trong nội dung nên cũng trượt theo
+            if (showBottomNav)
+              BottomNavBar(
+                currentIndex: nav.bottomNavIndex,
+                onTap: nav.selectBottomNav,
+              ),
+          ],
+        ),
       ),
-      bottomNavigationBar: showBottomNav
-          ? BottomNavBar(
-              currentIndex: nav.bottomNavIndex,
-              onTap: nav.selectBottomNav,
-            )
-          : null,
     );
   }
 }
