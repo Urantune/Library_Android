@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'app_router.dart';
 import 'providers/navigation_provider.dart';
-import 'screens/dashboard_page.dart';
 import 'theme/app_colors.dart';
 
 class LibraryApp extends StatelessWidget {
@@ -12,7 +12,7 @@ class LibraryApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => NavigationProvider(),
-      child: MaterialApp(
+      child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: 'Thư viện số',
         theme: ThemeData(
@@ -20,7 +20,7 @@ class LibraryApp extends StatelessWidget {
           scaffoldBackgroundColor: AppColors.background,
           colorSchemeSeed: AppColors.primary,
         ),
-        home: const DashboardPage(),
+        routerConfig: appRouter,
       ),
     );
   }

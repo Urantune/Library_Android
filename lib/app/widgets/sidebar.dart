@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../services/menu_service.dart';
 import '../theme/app_colors.dart';
 import 'sidebar_tile.dart';
+import '../models/menu_item.dart';
+import 'logout_dialog.dart';
 
 class Sidebar extends StatelessWidget {
   final int selectedIndex;
@@ -85,6 +87,13 @@ class Sidebar extends StatelessWidget {
               selected: selectedIndex == mainItems.length + i,
               onTap: () => onSelected(mainItems.length + i),
             ),
+          // Nút đăng xuất
+          SidebarTile(
+            item: const MenuItem(Icons.logout_rounded, 'Đăng xuất'),
+            selected:
+                false, // không phải một trang nên không bao giờ "đang chọn"
+            onTap: () => confirmLogout(context),
+          ),
         ],
       ),
     );
