@@ -11,6 +11,12 @@ class TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final nav = context.watch<NavigationProvider>();
+    // Thanh tìm kiếm toàn cục chỉ hiện trên trang chủ (dashboard + bottom nav index 0).
+    // Các tab khác đã có thanh tìm kiếm riêng theo chức năng.
+    final showSearch =
+        nav.selectedIndex == NavIndex.dashboard && nav.bottomNavIndex == 0;
+
     return Container(
       height: 72,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -31,32 +37,35 @@ class TopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Ô tìm kiếm
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Tìm sách, tác giả, thể loại...',
-                    hintStyle: const TextStyle(
-                        color: AppColors.textGrey, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search,
-                        size: 20, color: AppColors.textGrey),
-                    filled: true,
-                    fillColor: AppColors.background,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
+          // Ô tìm kiếm — chỉ hiện trên trang chủ.
+          if (showSearch)
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Tìm sách, tác giả, thể loại...',
+                      hintStyle: const TextStyle(
+                          color: AppColors.textGrey, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search,
+                          size: 20, color: AppColors.textGrey),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 16),
+            )
+          else
+            const Spacer(),
+          if (showSearch) const SizedBox(width: 16),
           // Thông tin người dùng — bấm để mở hồ sơ cá nhân
           InkWell(
             borderRadius: BorderRadius.circular(24),
