@@ -8,6 +8,7 @@ class NavIndex {
   static const category = 3;
   static const publisher = 4;
   static const user = 5;
+  static const loan = 6;
   static const notification = 8;
 }
 
