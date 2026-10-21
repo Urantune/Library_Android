@@ -16,6 +16,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {"eureka.client.enabled=false", "spring.cloud.discovery.enabled=false"})
@@ -99,5 +102,80 @@ class BookReadIntegrationTest {
         Book saved = books.saveAndFlush(book);
         assertThat(UUID.fromString(saved.getId())).isNotNull();
         assertThat(books.findById(saved.getId())).isPresent();
+    }
+
+    private static final String INPUT = """
+        {"title":"A new book","isbn":"978-0000000009","publicationYear":2024,
+         "pageCount":120,"publisherId":"publisher-1","authorIds":["author-1"],
+         "categoryIds":["category-1"],"status":"ACTIVE"}
+        """;
+
+    @Test
+    void createsBookAndReturnsGeneratedIdLocationAndRelations() throws Exception {
+        mvc.perform(post("/api/books").contentType("application/json").content(INPUT))
+            .andExpect(status().isCreated()).andExpect(header().exists("Location"))
+            .andExpect(jsonPath("$.status").value(201))
+            .andExpect(jsonPath("$.data.isbn").value("9780000000009"))
+            .andExpect(jsonPath("$.data.authors[0].id").value("author-1"))
+            .andExpect(jsonPath("$.data.totalCopies").value(0));
+        assertThat(books.findByIsbn("9780000000009")).isPresent();
+    }
+
+    @Test
+    void updatesBookAndReplacesRelationshipsWithoutCreatingCopies() throws Exception {
+        String input = INPUT.replace("978-0000000009", "9780132350884")
+            .replace("\"author-1\"", "").replace("\"category-1\"", "");
+        mvc.perform(put("/api/books/" + ID).contentType("application/json").content(input))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.title").value("A new book"))
+            .andExpect(jsonPath("$.data.authors").isEmpty())
+            .andExpect(jsonPath("$.data.categories").isEmpty())
+            .andExpect(jsonPath("$.data.totalCopies").value(2));
+        mvc.perform(get("/api/books/" + ID))
+            .andExpect(jsonPath("$.data.title").value("A new book"));
+    }
+
+    @Test
+    void duplicateIsbnIsRejectedOnCreateAndUpdate() throws Exception {
+        String duplicate = INPUT.replace("978-0000000009", "9780132350884");
+        mvc.perform(post("/api/books").contentType("application/json").content(duplicate))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DUPLICATE_ISBN"));
+        mvc.perform(put("/api/books/active-2").contentType("application/json").content(duplicate))
+            .andExpect(status().isConflict());
+        assertThat(books.findById("active-2").orElseThrow().getIsbn()).isEqualTo("0003");
+    }
+
+    @Test
+    void invalidInputAndReferencesDoNotPartiallySave() throws Exception {
+        for (String invalid : new String[]{
+            INPUT.replace("A new book", " "), INPUT.replace("120", "-1"),
+            INPUT.replace("2024", "9999"), INPUT.replace("ACTIVE", "UNKNOWN"),
+            INPUT.replace("author-1", "missing"), INPUT.replace("category-1", "missing"),
+            INPUT.replace("publisher-1", "missing"), "{broken"
+        }) {
+            mvc.perform(post("/api/books").contentType("application/json").content(invalid))
+                .andExpect(status().isBadRequest());
+        }
+        assertThat(books.findByIsbn("9780000000009")).isEmpty();
+        mvc.perform(put("/api/books/" + ID).contentType("application/json")
+            .content(INPUT.replace("author-1", "missing")))
+            .andExpect(status().isBadRequest());
+        assertThat(books.findById(ID).orElseThrow().getTitle()).isEqualTo("Clean Code");
+    }
+
+    @Test
+    void softDeleteKeepsCopiesAndHistoricalDetailAndIsIdempotent() throws Exception {
+        mvc.perform(delete("/api/books/" + ID)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/books/" + ID)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/books")).andExpect(jsonPath("$.data.totalElements").value(1));
+        mvc.perform(get("/api/books/" + ID)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("INACTIVE"))
+            .andExpect(jsonPath("$.data.totalCopies").value(2));
+    }
+
+    @Test
+    void unknownUpdateAndDeleteReturn404() throws Exception {
+        mvc.perform(put("/api/books/missing").contentType("application/json").content(INPUT))
+            .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/books/missing")).andExpect(status().isNotFound());
     }
 }

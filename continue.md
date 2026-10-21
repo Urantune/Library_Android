@@ -19,7 +19,9 @@ API: GET /api/books?page=0&size=20 và GET /api/books/{id}; list ACTIVE, detail 
 Android: fake JSON giữ nguyên, list có phân trang/search; BookDto map dữ liệu API để nối sau. Commit Android 9f9b5df.
 Kiểm chứng: Maven test 6 tests passed trên SQLite thật; Flutter book suite 11 passed. Analyze phát hiện 3 lint braces, sẽ sửa trong đợt form tiếp.
 Mapping liên owner: chỉ đồng bộ kiểu ID và cột entity/repository Author/Category/Publisher để quan hệ Book đọc được; không làm CRUD các domain đó.
-Đang tiếp tục: MSS-010/012/013 create/update/soft-delete và PRM-012/013 validation/persistence fake.
+MSS-010/012/013: create/update/soft-delete hoàn tất ở API local, metadata/quan hệ được transaction bảo vệ; ISBN chuẩn hóa và check duplicate; invalid request/ref trả 400, duplicate 409, absent 404.
+Kiểm chứng bổ sung: Maven test 12 tests passed, gồm create/update/duplicate/invalid ref/rollback/soft-delete-idempotency; không dùng H2 thay SQLite.
+Đang tiếp tục: PRM-012/013 validation/persistence fake và làm sạch checkout MSS local. Backend đọc đã push ở 9a77c6c.
 Chưa làm: auth/gateway/security, Redis, Kafka, API client tích hợp; không coi direct endpoints là đã bảo vệ RBAC.
 ===== HET NGUOI 1 =====
 
