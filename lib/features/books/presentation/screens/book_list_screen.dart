@@ -69,11 +69,12 @@ class _BookListScreenState extends ConsumerState<BookListScreen> {
               final result = BookPage.fromBooks(books,
                   query: _keyword, page: _page, size: _pageSize);
               final filtered = result.items;
-              if (filtered.isEmpty)
+              if (filtered.isEmpty) {
                 return Center(
                     child: Text(books.isEmpty
                         ? 'Chưa có sách nào.'
                         : 'Không tìm thấy sách phù hợp.'));
+              }
               return Column(children: [
                 Expanded(
                     child: RefreshIndicator(
@@ -199,8 +200,9 @@ class _BookCard extends ConsumerWidget {
                   final updated = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
                           builder: (_) => BookAddScreen(book: book)));
-                  if (updated == true && context.mounted)
+                  if (updated == true && context.mounted) {
                     ref.invalidate(bookListProvider);
+                  }
                 }),
             IconButton(
                 tooltip: 'Xóa sách',
@@ -231,11 +233,20 @@ class _BookCard extends ConsumerWidget {
                       child: const Text('Xóa'))
                 ]));
     if (approved != true) return;
-    await ref.read(bookRepositoryProvider).deleteBook(book.id);
-    ref.invalidate(bookListProvider);
-    if (context.mounted)
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Đã xóa sách.'), backgroundColor: Colors.green));
+    try {
+      await ref.read(bookRepositoryProvider).deleteBook(book.id);
+      ref.invalidate(bookListProvider);
+      ref.invalidate(bookDetailProvider(book.id));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Đã xóa sách.'), backgroundColor: Colors.green));
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
   }
 }
 

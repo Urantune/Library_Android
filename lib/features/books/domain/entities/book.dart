@@ -59,7 +59,8 @@ class Book {
     int? quantity,
     int? available,
     String? description,
-  }) => Book(
+  }) =>
+      Book(
         id: id,
         title: title ?? this.title,
         author: author ?? this.author,
