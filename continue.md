@@ -19,9 +19,10 @@ Phạm vi đã thu lại đúng yêu cầu: code Author/Category/Publisher và r
 Android JSON: ghi file tạm rồi rename; cache chỉ cập nhật sau khi lưu thành công; serialize các mutation; lỗi file/trùng ISBN/corrupt JSON hiển thị thay vì báo thành công giả.
 Hàm chính: BookReadService.list/detail; BookWriteService.create/update/deactivate; BookMapper.toResponse; BookLocalDataSource createBook/updateBook/deleteBook; BookPage.fromBooks; BookDto.toDomain.
 Kiểm chứng: Maven catalog-service test 14 passed trên SQLite thật (13 book + 1 context), bao gồm quan hệ cũ được giữ nguyên khi sửa metadata. Flutter test test/features/books 22 passed; analyze lib/features/books test/features/books no issues.
-Git: Android 9f9b5df + 1514c76 đã push; Server 9a77c6c + 3b9ba70 đã push, bản cô lập/null nằm ở commit hiện tại. Email author khangphucmn@outlook.com.
+Git: Android 1514c76; code Server c6025f7, trạng thái mới nhất nằm ở commit bàn giao hiện tại. Tổng đợt này 6 commit, dưới giới hạn 14; tên bắt đầu bằng hai chữ hoa. Email author khangphucmn@outlook.com. Người dùng đã cho phép tiếp tục Git.
 Chưa làm/không nhận hoàn tất: auth/gateway/RBAC, Redis, Kafka, search/filter server MSS-040, remote repository tích hợp, Swagger toàn service. Không coi direct APIs là đã bảo vệ quyền; chỉ local dev đến khi owner security tích hợp.
-Bước sau: tiếp tục đúng task Khang còn lại; chỉ kết nối quan hệ khi owner domain sẵn. Trước mắt hoàn tất làm sạch MSS local khỏi checkout main bị trộn và cấu hình upstream đúng Server/Android.
+MSS local sạch, nhánh/upstream Server; không còn Dart/pubspec/Flutter. Android local nhánh/upstream Android. Pull ff-only để tránh tự merge nhầm. Backup bị trộn đã vào Recycle Bin; hai worktree tạm khang-android/server-history-merge đã dọn sau khi xác nhận không chứa code chưa lưu. Các thay đổi local có từ trước ở LibPRM được giữ nguyên.
+Bước sau: tiếp tục đúng task Khang còn lại khi được giao; chỉ kết nối quan hệ khi owner domain sẵn. Bản bàn giao này được commit/push lên Server; không cần làm lại phần đã kiểm chứng để tăng số commit.
 ===== HET NGUOI 1 =====
 
 ===== NGUOI 2 - Đỗ Trọng Trí =====
