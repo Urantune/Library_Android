@@ -8,14 +8,14 @@ import java.util.Set;
 @Entity
 @Table(name = "authors")
 public class Author extends TimestampedEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
     @Column(nullable = false, columnDefinition = "TEXT") private String name;
-    @Column(columnDefinition = "TEXT") private String biography;
+    @Column(name = "bio", columnDefinition = "TEXT") private String biography;
     @Column(name = "birth_date", columnDefinition = "DATE") private LocalDate birthDate;
-    @Column(columnDefinition = "TEXT") private String nationality;
+    @Column(name = "country", columnDefinition = "TEXT") private String nationality;
     @ManyToMany(mappedBy = "authors") private Set<Book> books = new HashSet<>();
-    public Long getId() { return id; }
+    public String getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getBiography() { return biography; }

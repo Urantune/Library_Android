@@ -9,8 +9,8 @@ import java.util.Set;
 @Entity
 @Table(name = "books", uniqueConstraints = @UniqueConstraint(name = "uk_books_isbn", columnNames = "isbn"))
 public class Book extends TimestampedEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
     @Column(unique = true, columnDefinition = "TEXT") private String isbn;
     @Column(nullable = false, columnDefinition = "TEXT") private String title;
     @Column(columnDefinition = "TEXT") private String description;
@@ -28,7 +28,7 @@ public class Book extends TimestampedEntity {
     @ManyToMany
     @JoinTable(name = "book_categories", joinColumns = @JoinColumn(name = "book_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
     private Set<Category> categories = new HashSet<>();
-    public Long getId() { return id; }
+    public String getId() { return id; }
     public String getIsbn() { return isbn; }
     public void setIsbn(String isbn) { this.isbn = isbn; }
     public String getTitle() { return title; }

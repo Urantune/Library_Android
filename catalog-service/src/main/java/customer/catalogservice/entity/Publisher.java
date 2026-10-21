@@ -7,14 +7,14 @@ import java.util.List;
 @Entity
 @Table(name = "publishers", uniqueConstraints = @UniqueConstraint(name = "uk_publishers_name", columnNames = "name"))
 public class Publisher extends TimestampedEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
     @Column(nullable = false, unique = true, columnDefinition = "TEXT") private String name;
     @Column(columnDefinition = "TEXT") private String address;
     @Column(columnDefinition = "TEXT") private String email;
     @Column(columnDefinition = "TEXT") private String phone;
     @OneToMany(mappedBy = "publisher") private List<Book> books = new ArrayList<>();
-    public Long getId() { return id; }
+    public String getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getAddress() { return address; }

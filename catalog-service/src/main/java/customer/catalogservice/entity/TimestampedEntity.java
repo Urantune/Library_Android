@@ -1,30 +1,34 @@
 package customer.catalogservice.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @MappedSuperclass
 public abstract class TimestampedEntity {
 
-    @Column(name = "created_at", columnDefinition = "DATETIME", updatable = false)
+    @Convert(converter = UtcTimestampConverter.class)
+    @Column(name = "created_at", columnDefinition = "TEXT", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", columnDefinition = "DATETIME")
+    @Convert(converter = UtcTimestampConverter.class)
+    @Column(name = "updated_at", columnDefinition = "TEXT")
     private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
