@@ -1,0 +1,16 @@
+**/target/
+**/.m2/
+**/build/
+**/out/
+.idea/
+*.iml
+*.log
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+.env
+.env.*
+!.env.example
+.DS_Store
