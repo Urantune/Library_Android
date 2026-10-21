@@ -41,14 +41,9 @@ class BookReadIntegrationTest {
         for (String table : new String[]{"book_authors", "book_categories", "book_copies", "books", "authors", "categories", "publishers"}) {
             jdbc.update("DELETE FROM " + table);
         }
-        jdbc.update("INSERT INTO publishers(id,name,status,created_at,updated_at) VALUES('publisher-1','NXB','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
-        jdbc.update("INSERT INTO authors(id,name,bio,country,status,created_at,updated_at) VALUES('author-1','Robert Martin','Author bio','US','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
-        jdbc.update("INSERT INTO categories(id,name,status,created_at,updated_at) VALUES('category-1','Technology','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
-        jdbc.update("INSERT INTO books(id,isbn,title,publisher_id,status,publication_year,page_count,created_at,updated_at) VALUES(?, '9780132350884','Clean Code','publisher-1','ACTIVE',2008,464,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", ID);
+        jdbc.update("INSERT INTO books(id,isbn,title,status,publication_year,page_count,created_at,updated_at) VALUES(?, '9780132350884','Clean Code','ACTIVE',2008,464,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", ID);
         jdbc.update("INSERT INTO books(id,isbn,title,status,created_at,updated_at) VALUES('inactive-1','0002','Archived','INACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO books(id,isbn,title,status,created_at,updated_at) VALUES('active-2','0003','Effective Java','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
-        jdbc.update("INSERT INTO book_authors(book_id,author_id) VALUES(?,'author-1')", ID);
-        jdbc.update("INSERT INTO book_categories(book_id,category_id) VALUES(?,'category-1')", ID);
         jdbc.update("INSERT INTO book_copies(id,book_id,accession_code,condition,circulation_status,created_at,updated_at) VALUES('copy-1',?,'ACC-1','GOOD','AVAILABLE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", ID);
         jdbc.update("INSERT INTO book_copies(id,book_id,accession_code,condition,circulation_status,created_at,updated_at) VALUES('copy-2',?,'ACC-2','GOOD','BORROWED',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", ID);
     }
@@ -69,9 +64,9 @@ class BookReadIntegrationTest {
     @Test
     void detailMapsRelationsAndCountsPhysicalCopies() throws Exception {
         mvc.perform(get("/api/books/" + ID))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.data.publisher.name").value("NXB"))
-            .andExpect(jsonPath("$.data.authors[0].name").value("Robert Martin"))
-            .andExpect(jsonPath("$.data.categories[0].name").value("Technology"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.publisher").doesNotExist())
+            .andExpect(jsonPath("$.data.authors").doesNotExist())
+            .andExpect(jsonPath("$.data.categories").doesNotExist())
             .andExpect(jsonPath("$.data.pageCount").value(464))
             .andExpect(jsonPath("$.data.totalCopies").value(2))
             .andExpect(jsonPath("$.data.availableCopies").value(1));
@@ -106,8 +101,8 @@ class BookReadIntegrationTest {
 
     private static final String INPUT = """
         {"title":"A new book","isbn":"978-0000000009","publicationYear":2024,
-         "pageCount":120,"publisherId":"publisher-1","authorIds":["author-1"],
-         "categoryIds":["category-1"],"status":"ACTIVE"}
+         "pageCount":120,"publisherId":null,"authorIds":[],
+         "categoryIds":[],"status":"ACTIVE"}
         """;
 
     @Test
@@ -116,7 +111,7 @@ class BookReadIntegrationTest {
             .andExpect(status().isCreated()).andExpect(header().exists("Location"))
             .andExpect(jsonPath("$.status").value(201))
             .andExpect(jsonPath("$.data.isbn").value("9780000000009"))
-            .andExpect(jsonPath("$.data.authors[0].id").value("author-1"))
+            .andExpect(jsonPath("$.data.authors").doesNotExist())
             .andExpect(jsonPath("$.data.totalCopies").value(0));
         assertThat(books.findByIsbn("9780000000009")).isPresent();
     }
@@ -127,8 +122,8 @@ class BookReadIntegrationTest {
             .replace("\"author-1\"", "").replace("\"category-1\"", "");
         mvc.perform(put("/api/books/" + ID).contentType("application/json").content(input))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.title").value("A new book"))
-            .andExpect(jsonPath("$.data.authors").isEmpty())
-            .andExpect(jsonPath("$.data.categories").isEmpty())
+            .andExpect(jsonPath("$.data.authors").doesNotExist())
+            .andExpect(jsonPath("$.data.categories").doesNotExist())
             .andExpect(jsonPath("$.data.totalCopies").value(2));
         mvc.perform(get("/api/books/" + ID))
             .andExpect(jsonPath("$.data.title").value("A new book"));
@@ -148,16 +143,14 @@ class BookReadIntegrationTest {
     void invalidInputAndReferencesDoNotPartiallySave() throws Exception {
         for (String invalid : new String[]{
             INPUT.replace("A new book", " "), INPUT.replace("120", "-1"),
-            INPUT.replace("2024", "9999"), INPUT.replace("ACTIVE", "UNKNOWN"),
-            INPUT.replace("author-1", "missing"), INPUT.replace("category-1", "missing"),
-            INPUT.replace("publisher-1", "missing"), "{broken"
+            INPUT.replace("2024", "9999"), INPUT.replace("ACTIVE", "UNKNOWN"), "{broken"
         }) {
             mvc.perform(post("/api/books").contentType("application/json").content(invalid))
                 .andExpect(status().isBadRequest());
         }
         assertThat(books.findByIsbn("9780000000009")).isEmpty();
         mvc.perform(put("/api/books/" + ID).contentType("application/json")
-            .content(INPUT.replace("author-1", "missing")))
+            .content(INPUT.replace("A new book", " ")))
             .andExpect(status().isBadRequest());
         assertThat(books.findById(ID).orElseThrow().getTitle()).isEqualTo("Clean Code");
     }
@@ -177,5 +170,39 @@ class BookReadIntegrationTest {
         mvc.perform(put("/api/books/missing").contentType("application/json").content(INPUT))
             .andExpect(status().isNotFound());
         mvc.perform(delete("/api/books/missing")).andExpect(status().isNotFound());
+    }
+    @Test
+    void relatedModulesRemainUntouchedAndUnavailableRelationsAreExplicit() throws Exception {
+        for (String related : new String[]{
+            INPUT.replace("\"publisherId\":null", "\"publisherId\":\"not-ready\""),
+            INPUT.replace("\"authorIds\":[]", "\"authorIds\":[\"not-ready\"]"),
+            INPUT.replace("\"categoryIds\":[]", "\"categoryIds\":[\"not-ready\"]")
+        }) {
+            mvc.perform(post("/api/books").contentType("application/json").content(related))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("RELATION_NOT_READY"));
+        }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM authors", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM categories", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM publishers", Integer.class)).isZero();
+    }
+
+    @Test
+    void readingAndEditingMetadataDoesNotLoadOrChangeOtherOwnersRelations() throws Exception {
+        jdbc.update("INSERT INTO publishers(id,name,status,created_at,updated_at) VALUES('other-publisher','Other','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO authors(id,name,status,created_at,updated_at) VALUES('other-author','Other','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO categories(id,name,status,created_at,updated_at) VALUES('other-category','Other','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("UPDATE books SET publisher_id='other-publisher' WHERE id=?", ID);
+        jdbc.update("INSERT INTO book_authors(book_id,author_id) VALUES(?,'other-author')", ID);
+        jdbc.update("INSERT INTO book_categories(book_id,category_id) VALUES(?,'other-category')", ID);
+        mvc.perform(get("/api/books/" + ID)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.publisher").doesNotExist())
+            .andExpect(jsonPath("$.data.authors").doesNotExist())
+            .andExpect(jsonPath("$.data.categories").doesNotExist());
+        mvc.perform(put("/api/books/" + ID).contentType("application/json")
+            .content(INPUT.replace("978-0000000009", "9780132350884")))
+            .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT publisher_id FROM books WHERE id=?", String.class, ID)).isEqualTo("other-publisher");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM book_authors WHERE book_id=?", Integer.class, ID)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM book_categories WHERE book_id=?", Integer.class, ID)).isEqualTo(1);
     }
 }

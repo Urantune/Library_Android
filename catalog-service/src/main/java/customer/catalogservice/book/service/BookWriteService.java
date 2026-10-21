@@ -5,12 +5,9 @@ import customer.catalogservice.book.dto.BookWriteRequest;
 import customer.catalogservice.book.mapper.BookMapper;
 import customer.catalogservice.entity.Book;
 import customer.catalogservice.entity.BookStatus;
-import customer.catalogservice.repository.*;
+import customer.catalogservice.repository.BookRepository;
 import java.time.Year;
 import java.time.ZoneOffset;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,17 +16,10 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class BookWriteService {
     private final BookRepository books;
-    private final AuthorRepository authors;
-    private final CategoryRepository categories;
-    private final PublisherRepository publishers;
     private final BookMapper mapper;
 
-    public BookWriteService(BookRepository books, AuthorRepository authors,
-        CategoryRepository categories, PublisherRepository publishers, BookMapper mapper) {
+    public BookWriteService(BookRepository books, BookMapper mapper) {
         this.books = books;
-        this.authors = authors;
-        this.categories = categories;
-        this.publishers = publishers;
         this.mapper = mapper;
     }
 
@@ -60,6 +50,12 @@ public class BookWriteService {
     }
 
     private void apply(BookWriteRequest request, Book book) {
+        if ((request.publisherId() != null && !request.publisherId().isBlank())
+            || (request.authorIds() != null && !request.authorIds().isEmpty())
+            || (request.categoryIds() != null && !request.categoryIds().isEmpty())) {
+            throw new BookWriteException(HttpStatus.CONFLICT, "RELATION_NOT_READY", "relations",
+                "Related modules are not ready; use null or empty references");
+        }
         String isbn = request.isbn().replaceAll("[\\s-]", "").toUpperCase(java.util.Locale.ROOT);
         if (isbn.isBlank()) throw invalid("isbn", "ISBN is required");
         books.findByIsbn(isbn).ifPresent(existing -> {
@@ -76,15 +72,6 @@ public class BookWriteService {
         } catch (IllegalArgumentException ex) {
             throw invalid("status", "Status must be ACTIVE or INACTIVE");
         }
-        var publisher = request.publisherId() == null || request.publisherId().isBlank()
-            ? null : publishers.findById(request.publisherId())
-                .orElseThrow(() -> invalid("publisherId", "Publisher does not exist"));
-        var authorIds = ids(request.authorIds());
-        var authorEntities = authors.findAllById(authorIds);
-        if (authorEntities.size() != authorIds.size()) throw invalid("authorIds", "Author does not exist");
-        var categoryIds = ids(request.categoryIds());
-        var categoryEntities = categories.findAllById(categoryIds);
-        if (categoryEntities.size() != categoryIds.size()) throw invalid("categoryIds", "Category does not exist");
         book.setTitle(request.title().trim());
         book.setIsbn(isbn);
         book.setDescription(request.description());
@@ -93,15 +80,6 @@ public class BookWriteService {
         book.setPageCount(request.pageCount());
         book.setCoverUrl(request.coverUrl());
         book.setStatus(status);
-        book.setPublisher(publisher);
-        book.getAuthors().clear();
-        book.getAuthors().addAll(authorEntities);
-        book.getCategories().clear();
-        book.getCategories().addAll(categoryEntities);
-    }
-
-    private Set<String> ids(List<String> values) {
-        return values == null ? Set.of() : new LinkedHashSet<>(values);
     }
 
     private BookWriteException invalid(String field, String message) {

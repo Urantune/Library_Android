@@ -12,17 +12,16 @@ Khởi tạo file này không có nghĩa tính năng của bất kỳ thành vi�
 
 ===== NGUOI 1 - Dương Phúc Khang =====
 Cập nhật: 2026-10-22. Contract LM-1.1.1.
-Task / trạng thái: MSS-009, MSS-011 đã có schema/entity/read API và test; PRM-011 demo-ready.
-Đã làm: UUID String khớp schema TEXT; Flyway starter Boot 4 và migration page_count/acquired_at; UTC TEXT converter; list/detail DTO + pagination + 400/404.
-File/hàm: catalog-service/book/controller/BookController.list/detail; BookReadService.list/detail; BookMapper.toResponse; UtcTimestampConverter.
-API: GET /api/books?page=0&size=20 và GET /api/books/{id}; list ACTIVE, detail giữ lịch sử INACTIVE. Port 8082.
-Android: fake JSON giữ nguyên, list có phân trang/search; BookDto map dữ liệu API để nối sau. Commit Android 9f9b5df.
-Kiểm chứng: Maven test 6 tests passed trên SQLite thật; Flutter book suite 11 passed. Analyze phát hiện 3 lint braces, sẽ sửa trong đợt form tiếp.
-Mapping liên owner: chỉ đồng bộ kiểu ID và cột entity/repository Author/Category/Publisher để quan hệ Book đọc được; không làm CRUD các domain đó.
-MSS-010/012/013: create/update/soft-delete hoàn tất ở API local, metadata/quan hệ được transaction bảo vệ; ISBN chuẩn hóa và check duplicate; invalid request/ref trả 400, duplicate 409, absent 404.
-Kiểm chứng bổ sung: Maven test 12 tests passed, gồm create/update/duplicate/invalid ref/rollback/soft-delete-idempotency; không dùng H2 thay SQLite.
-Đang tiếp tục: PRM-012/013 validation/persistence fake và làm sạch checkout MSS local. Backend đọc đã push ở 9a77c6c.
-Chưa làm: auth/gateway/security, Redis, Kafka, API client tích hợp; không coi direct endpoints là đã bảo vệ RBAC.
+Mốc khoảng 50% theo 8/16 task, không phải phần trăm điểm chấm hay end-to-end production.
+PRM-011/012/013: demo-ready. Sách list/detail có phân trang/search/retry; form thêm/sửa validate required/year/stock; giữ fake urantune.json, mapper API riêng, chưa gọi server.
+MSS-009/010/011/012/013: API local verified. UUID String, Flyway migration Book, UTC TEXT Book-only converter; GET list/detail, POST create, PUT metadata, DELETE soft INACTIVE; check ISBN duplicate và field errors.
+Phạm vi đã thu lại đúng yêu cầu: code Author/Category/Publisher và repositories + TimestampedEntity shared được hoàn nguyên đúng baseline 0d99ca2. Book mapper trả publisher/authors/categories=null, không đọc domain khác. Không cập nhật liên kết cũ; publisher_id chỉ đọc từ Book. Nonempty references khi ghi trả 409 RELATION_NOT_READY để không âm thầm bỏ dữ liệu.
+Android JSON: ghi file tạm rồi rename; cache chỉ cập nhật sau khi lưu thành công; serialize các mutation; lỗi file/trùng ISBN/corrupt JSON hiển thị thay vì báo thành công giả.
+Hàm chính: BookReadService.list/detail; BookWriteService.create/update/deactivate; BookMapper.toResponse; BookLocalDataSource createBook/updateBook/deleteBook; BookPage.fromBooks; BookDto.toDomain.
+Kiểm chứng: Maven catalog-service test 14 passed trên SQLite thật (13 book + 1 context), bao gồm quan hệ cũ được giữ nguyên khi sửa metadata. Flutter test test/features/books 22 passed; analyze lib/features/books test/features/books no issues.
+Git: Android 9f9b5df + 1514c76 đã push; Server 9a77c6c + 3b9ba70 đã push, bản cô lập/null nằm ở commit hiện tại. Email author khangphucmn@outlook.com.
+Chưa làm/không nhận hoàn tất: auth/gateway/RBAC, Redis, Kafka, search/filter server MSS-040, remote repository tích hợp, Swagger toàn service. Không coi direct APIs là đã bảo vệ quyền; chỉ local dev đến khi owner security tích hợp.
+Bước sau: tiếp tục đúng task Khang còn lại; chỉ kết nối quan hệ khi owner domain sẵn. Trước mắt hoàn tất làm sạch MSS local khỏi checkout main bị trộn và cấu hình upstream đúng Server/Android.
 ===== HET NGUOI 1 =====
 
 ===== NGUOI 2 - Đỗ Trọng Trí =====

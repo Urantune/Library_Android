@@ -1,4 +1,4 @@
-package customer.catalogservice.entity;
+package customer.catalogservice.book.persistence;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

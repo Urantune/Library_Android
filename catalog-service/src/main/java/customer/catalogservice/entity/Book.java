@@ -8,7 +8,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "books", uniqueConstraints = @UniqueConstraint(name = "uk_books_isbn", columnNames = "isbn"))
-public class Book extends TimestampedEntity {
+public class Book extends customer.catalogservice.book.persistence.BookTimestamps {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     @Column(unique = true, columnDefinition = "TEXT") private String isbn;
@@ -18,7 +18,7 @@ public class Book extends TimestampedEntity {
     @Column(columnDefinition = "TEXT") private String language;
     @Column(name = "page_count", columnDefinition = "INTEGER") private Integer pageCount;
     @Column(name = "cover_url", columnDefinition = "TEXT") private String coverUrl;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "publisher_id", foreignKey = @ForeignKey(name = "fk_books_publisher"))
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "publisher_id", insertable = false, updatable = false, foreignKey = @ForeignKey(name = "fk_books_publisher"))
     private Publisher publisher;
     @Enumerated(EnumType.STRING) @Column(nullable = false, columnDefinition = "TEXT") private BookStatus status;
     @OneToMany(mappedBy = "book") private List<BookCopy> copies = new ArrayList<>();
