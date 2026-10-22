@@ -1,8 +1,8 @@
 package customer.catalogservice.book;
 
-import customer.catalogservice.entity.Book;
-import customer.catalogservice.entity.BookStatus;
-import customer.catalogservice.repository.BookRepository;
+import catalogservice.entity.Book;
+import catalogservice.enums.BookStatus;
+import catalogservice.repository.BookRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
