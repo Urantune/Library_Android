@@ -1,6 +1,8 @@
 package catalogservice.entity;
 
+import catalogservice.persistence.UtcTimestampConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -9,10 +11,12 @@ import java.time.LocalDateTime;
 @MappedSuperclass
 public abstract class TimestampedEntity {
 
-    @Column(name = "created_at", columnDefinition = "DATETIME", updatable = false)
+    @Convert(converter = UtcTimestampConverter.class)
+    @Column(name = "created_at", columnDefinition = "TEXT", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", columnDefinition = "DATETIME")
+    @Convert(converter = UtcTimestampConverter.class)
+    @Column(name = "updated_at", columnDefinition = "TEXT", nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist

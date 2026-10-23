@@ -1,28 +1,42 @@
 package catalogservice.entity;
 
+import catalogservice.persistence.LocalDateStringConverter;
 import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "authors")
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class Author extends TimestampedEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    @Column(nullable = false, columnDefinition = "TEXT") private String name;
-    @Column(columnDefinition = "TEXT") private String biography;
-    @Column(name = "birth_date", columnDefinition = "DATE") private LocalDate birthDate;
-    @Column(columnDefinition = "TEXT") private String nationality;
-    @ManyToMany(mappedBy = "authors") private Set<Book> books = new HashSet<>();
-    public Long getId() { return id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getBiography() { return biography; }
-    public void setBiography(String biography) { this.biography = biography; }
-    public LocalDate getBirthDate() { return birthDate; }
-    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
-    public String getNationality() { return nationality; }
-    public void setNationality(String nationality) { this.nationality = nationality; }
-    public Set<Book> getBooks() { return books; }
+    @Id
+    @Column(length = 20)
+    String id;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    String name;
+
+    @Column(columnDefinition = "TEXT")
+    String bio;
+
+    @Convert(converter = LocalDateStringConverter.class)
+    @Column(name = "birth_date", columnDefinition = "TEXT")
+    LocalDate birthDate;
+
+    @Column(columnDefinition = "TEXT")
+    String country;
+
+    @Column(columnDefinition = "TEXT")
+    String status;
+
+    @ManyToMany(mappedBy = "authors")
+    Set<Book> books = new HashSet<>();
 }

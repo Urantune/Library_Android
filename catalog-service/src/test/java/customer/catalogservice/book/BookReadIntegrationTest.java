@@ -1,5 +1,6 @@
 package customer.catalogservice.book;
 
+import catalogservice.CatalogServiceApplication;
 import catalogservice.entity.Book;
 import catalogservice.enums.BookStatus;
 import catalogservice.repository.BookRepository;
@@ -21,7 +22,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = {"eureka.client.enabled=false", "spring.cloud.discovery.enabled=false"})
+@SpringBootTest(classes = CatalogServiceApplication.class,
+    properties = {"eureka.client.enabled=false", "spring.cloud.discovery.enabled=false"})
 class BookReadIntegrationTest {
     private static final String DB = "jdbc:sqlite:target/books-" + UUID.randomUUID() + ".db";
     private static final String ID = "9a3019b0-786b-4000-8000-000000000001";
@@ -59,6 +61,21 @@ class BookReadIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].title").value("Effective Java"));
         mvc.perform(get("/api/books").param("page", "10"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
+    void listsAuthorsWithSqliteTimestampText() throws Exception {
+        jdbc.update("""
+            INSERT INTO authors(id,name,birth_date,status,created_at,updated_at)
+            VALUES('author-1','Test Author','1980-04-12','ACTIVE',
+                   '2026-10-01 00:00:00.000','2026-10-02 13:14:15.000')
+            """);
+
+        mvc.perform(get("/api/authors"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.result.content[0].birthDate").value("1980-04-12"))
+            .andExpect(jsonPath("$.result.content[0].created_at").value("2026-10-01T00:00:00"))
+            .andExpect(jsonPath("$.result.content[0].updated_at").value("2026-10-02T13:14:15"));
     }
 
     @Test
