@@ -4,7 +4,6 @@ import catalogservice.dto.response.AuthorResponse;
 import catalogservice.dto.response.PageDTO;
 import catalogservice.dto.response.ResponseAPI;
 import catalogservice.service.IAuthorService;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;

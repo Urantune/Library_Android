@@ -23,6 +23,7 @@ public class GlobalExceptionHandler {
         ResponseAPI apiResponse = new ResponseAPI();
         apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
         apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
+        log.error("Erro",ex);
         return ResponseEntity.badRequest().body(apiResponse);
     }
 
@@ -33,6 +34,7 @@ public class GlobalExceptionHandler {
         ResponseAPI apiResponse = new ResponseAPI();
         apiResponse.setCode(errorCode.getCode());
         apiResponse.setMessage(errorCode.getMessage());
+        log.error("Erro",ex);
         return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
     }
 
@@ -40,6 +42,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = AccessDeniedException.class)
     ResponseEntity<ResponseAPI> handleAccessDeniedException(AccessDeniedException ex) {
         ErrorCode errorCode = ErrorCode.UNAUTHORIZED;
+        log.error("Erro",ex);
         return ResponseEntity.status(errorCode.getStatusCode()).body(
                 ResponseAPI.builder()
                         .code(errorCode.getCode())

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuthorResponse {
+    String id;
     String name;
     String bio;
     LocalDate birthDate;
