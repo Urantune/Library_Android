@@ -1,17 +1,19 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/author_local_data_source.dart';
+
+import '../../data/datasources/author_remote_data_source.dart';
 import '../../data/repositories/author_repository_impl.dart';
 import '../../domain/entities/author.dart';
 import '../../domain/repositories/author_repository.dart';
 
-final authorLocalDataSourceProvider = Provider<AuthorLocalDataSource>((ref) {
-  return AuthorLocalDataSource();
+
+final authorRemoteDataSourceProvider = Provider<AuthorRemoteDataSource>((ref) {
+  return AuthorRemoteDataSource();
 });
 
 final authorRepositoryProvider = Provider<AuthorRepository>((ref) {
-  return AuthorRepositoryImpl(ref.watch(authorLocalDataSourceProvider));
+  return AuthorRepositoryImpl(ref.watch(authorRemoteDataSourceProvider));
 });
 
 final authorListProvider = FutureProvider<List<Author>>((ref) {
