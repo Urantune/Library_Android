@@ -15,8 +15,7 @@ class AuthorRemoteDataSource {
       'size': size,
     });
     final data = response.data;
-    // Nếu BE trả về ResponseAPI thì lấy data từ trường 'data'
-    final pageJson = data['data'] ?? data;
+final pageJson = (data['result'] ?? data['data'] ?? data) as Map<String, dynamic>;
     return PageDTO<AuthorResponse>.fromJson(
       pageJson,
       (json) => AuthorResponse.fromJson(json),
