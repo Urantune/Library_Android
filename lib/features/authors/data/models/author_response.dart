@@ -1,4 +1,5 @@
 class AuthorResponse {
+  final String id;
   final String name;
   final String? bio;
   final DateTime? birthDate;
@@ -8,6 +9,7 @@ class AuthorResponse {
   final DateTime? updateAt;
 
   AuthorResponse({
+    required this.id,
     required this.name,
     this.bio,
     this.birthDate,
@@ -19,13 +21,14 @@ class AuthorResponse {
 
   factory AuthorResponse.fromJson(Map<String, dynamic> json) {
     return AuthorResponse(
+       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       bio: json['bio'],
       birthDate: json['birthDate'] != null ? DateTime.tryParse(json['birthDate']) : null,
       country: json['country'],
       status: json['status'] ?? '',
-      createAt: json['create_at'] != null ? DateTime.tryParse(json['create_at']) : null,
-      updateAt: json['update_at'] != null ? DateTime.tryParse(json['update_at']) : null,
+      createAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
+updateAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at']) : null,
     );
   }
 }
