@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,13 +24,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(classes = CatalogServiceApplication.class,
-    properties = {"eureka.client.enabled=false", "spring.cloud.discovery.enabled=false"})
+    properties = {"eureka.client.enabled=false", "spring.cloud.discovery.enabled=false", "app.seed.books=false"})
 class BookReadIntegrationTest {
     private static final String DB = "jdbc:sqlite:target/books-" + UUID.randomUUID() + ".db";
     private static final String ID = "9a3019b0-786b-4000-8000-000000000001";
     @Autowired WebApplicationContext context;
     @Autowired JdbcTemplate jdbc;
     @Autowired BookRepository books;
+    @Autowired CacheManager cacheManager;
     private MockMvc mvc;
 
     @DynamicPropertySource
@@ -40,6 +42,10 @@ class BookReadIntegrationTest {
     @BeforeEach
     void prepare() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
+        for (String cacheName : new String[]{"book-pages", "book-details"}) {
+            var cache = cacheManager.getCache(cacheName);
+            if (cache != null) cache.clear();
+        }
         for (String table : new String[]{"book_authors", "book_categories", "book_copies", "books", "authors", "categories", "publishers"}) {
             jdbc.update("DELETE FROM " + table);
         }
@@ -61,6 +67,20 @@ class BookReadIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].title").value("Effective Java"));
         mvc.perform(get("/api/books").param("page", "10"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
+    void searchesActiveBooksByTextAndPublisher() throws Exception {
+        jdbc.update("INSERT INTO publishers(id,name,status,created_at,updated_at) VALUES('pub-1','Khang Press','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("UPDATE books SET publisher_id='pub-1' WHERE id=?", ID);
+
+        mvc.perform(get("/api/books").param("q", "clean"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totalElements").value(1))
+            .andExpect(jsonPath("$.data.items[0].id").value(ID));
+        mvc.perform(get("/api/books").param("publisherId", "pub-1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
     @Test

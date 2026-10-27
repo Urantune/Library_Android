@@ -13,6 +13,8 @@ import catalogservice.exception.BookWriteException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -26,6 +28,7 @@ public class BookWriteService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "book-pages", allEntries = true)
     public BookResponse create(BookWriteRequest request) {
         Book book = new Book();
         apply(request, book);
@@ -33,6 +36,7 @@ public class BookWriteService {
     }
 
     @Transactional
+    @Caching(evict = {@CacheEvict(cacheNames = "book-pages", allEntries = true), @CacheEvict(cacheNames = "book-details", key = "#id")})
     public BookResponse update(String id, BookWriteRequest request) {
         Book book = requireBook(id);
         apply(request, book);
@@ -40,6 +44,7 @@ public class BookWriteService {
     }
 
     @Transactional
+    @Caching(evict = {@CacheEvict(cacheNames = "book-pages", allEntries = true), @CacheEvict(cacheNames = "book-details", key = "#id")})
     public void deactivate(String id) {
         Book book = requireBook(id);
         book.setStatus(BookStatus.INACTIVE);

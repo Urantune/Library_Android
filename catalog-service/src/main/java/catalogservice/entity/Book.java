@@ -20,6 +20,7 @@ public class Book extends BookTimestamps {
     @Column(columnDefinition = "TEXT") private String language;
     @Column(name = "page_count", columnDefinition = "INTEGER") private Integer pageCount;
     @Column(name = "cover_url", columnDefinition = "TEXT") private String coverUrl;
+    @Column(name = "publisher_id", columnDefinition = "TEXT") private String publisherId;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "publisher_id", insertable = false, updatable = false, foreignKey = @ForeignKey(name = "fk_books_publisher"))
     private Publisher publisher;
     @Enumerated(EnumType.STRING) @Column(nullable = false, columnDefinition = "TEXT") private BookStatus status;
@@ -45,6 +46,8 @@ public class Book extends BookTimestamps {
     public void setPageCount(Integer pageCount) { this.pageCount = pageCount; }
     public String getCoverUrl() { return coverUrl; }
     public void setCoverUrl(String coverUrl) { this.coverUrl = coverUrl; }
+    public String getPublisherId() { return publisherId; }
+    public void setPublisherId(String publisherId) { this.publisherId = publisherId; }
     public Publisher getPublisher() { return publisher; }
     public void setPublisher(Publisher publisher) { this.publisher = publisher; }
     public BookStatus getStatus() { return status; }
