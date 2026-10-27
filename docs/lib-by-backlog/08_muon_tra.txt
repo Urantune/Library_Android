@@ -1,0 +1,11 @@
+MƯỢN TRẢ — PRM-031, PRM-032
+===========================
+
+CHƯA CÓ CODE FEATURE TRONG lib.
+
+Dashboard Sidebar có item index 6 "Mượn - Trả" ở lib/app/library_app.dart,
+nhưng _buildPage không có case index 6. Vì vậy switch rơi vào _PlaceholderPage
+và chỉ hiện "Trang này đang được phát triển".
+
+Chưa có entity Borrow/Loan, repository, provider, screen, lịch sử, gia hạn hay
+API/local storage. Task backlog PRM-031/032 hiện chưa có luồng chạy để giải thích.

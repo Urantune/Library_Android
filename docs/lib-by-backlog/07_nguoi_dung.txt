@@ -1,0 +1,37 @@
+CRUD NGƯỜI DÙNG — PRM-027, PRM-028, PRM-029, PRM-030
+======================================================
+
+LƯU ĐỒ: UserListScreen -> userListProvider -> UserRepositoryImpl
+-> UserLocalDataSource -> SharedPreferences/users.json.
+
+user.dart:1-78
+  Entity immutable. copyWith tạo user mới và được lock/unlock dùng để đổi status.
+
+user_local_data_source.dart:8-133
+  Seed users.json ở lần đầu, sau đó lưu mảng JSON trong key users_data. create
+  chặn id/username trùng. lockUser đổi LOCKED, unlockUser đổi ACTIVE; delete xóa id.
+
+user_provider.dart:8-23
+  FutureProvider list và family detail id.
+
+user_list_screen.dart:9-365
+  keyword/roleFilter/statusFilter là state local. ref.watch tải list; filters chỉ
+  lọc dữ liệu hiện có. FAB push UserFormScreen, card push UserDetailScreen.
+
+user_form_screen.dart:7-240
+  initState điền controller khi sửa. _submit validate, tạo User, chọn create/update
+  bằng isEditing rồi invalidate userListProvider.
+
+user_detail_screen.dart:8-429
+  Watch detail. Nút edit push form; dialog lock/delete gọi repository rồi
+  invalidate list/detail. Xóa thành công pop detail về list.
+
+CHI TIẾT LỆNH CHẠY
+
+user_local_data_source.dart:13-29 chạy seed SharedPreferences; createUser kiểm tra
+id rồi username để không tạo trùng. lockUser/unlockUser tìm index và gán object mới
+qua copyWith, không mutate User cũ. user_list_screen.dart watch provider, lọc ba
+điều kiện bằng `&&`; FAB push form. user_form_screen.dart initState điền controller
+từ widget.user, `_submit` chọn create/update theo isEditing, rồi invalidate list.
+user_detail_screen.dart dialog chỉ chạy repository sau xác nhận; xong invalidate
+list và detail để card/detail không hiển thị trạng thái cũ.

@@ -1,0 +1,179 @@
+PHẦN SÁCH — BẢN CODE HIỆN TẠI
+==============================
+
+ĐIỂM ĐÃ ĐỔI
+------------
+
+Trước đây màn danh sách tự mở dialog để thêm/sửa/xem. Bây giờ đã tách thành ba
+màn hình dễ quản lý hơn:
+
+  BookListScreen     = danh sách, tìm, mở thêm/sửa/xóa.
+  BookAddScreen      = form thêm hoặc cập nhật.
+  BookDetailScreen   = màn hình xem chi tiết.
+
+Luồng bấm Sách:
+
+Sidebar Sách -> BookListScreen
+  -> bookListProvider -> BookRepository -> BookLocalDataSource -> file/asset
+  -> List<Book> -> các BookCard.
+
+Luồng bấm một cuốn:
+
+BookCard -> BookDetailScreen(bookId)
+  -> bookDetailProvider(bookId) -> getBookById(id) -> Book.
+
+1. DỮ LIỆU SÁCH
+----------------
+
+File: lib/features/books/domain/entities/book.dart
+
+L1 `class Book`: tạo khuôn cho MỘT cuốn sách.
+L2-L13 constructor: cách tạo một Book. L3-L11 là dữ liệu bắt buộc. `required`
+nghĩa là thiếu tên/id/ISBN... thì Dart báo lỗi ngay. L12 để description mặc định
+rỗng nếu người dùng không nhập.
+L15-L24 là dữ liệu nằm trong Book. `String` là chữ, `int` là số nguyên. `final`
+nghĩa là sau khi tạo không được sửa trực tiếp `book.title`; cần tạo Book mới.
+L26-L37 `fromJson`: đọc một dòng JSON từ file thành Book. `?? ''` có nghĩa “thiếu
+chữ thì dùng chuỗi trống”; `?? 0` là “thiếu số thì dùng 0”.
+L39-L50 `toJson`: làm ngược lại để lưu Book xuống JSON. `Map` là dữ liệu theo nhãn,
+ví dụ `{'title': 'Clean Code', 'year': 2019}`.
+L52-L73 `copyWith`: tạo bản sao Book, chỉ thay field truyền vào. Hiện flow Sách tạo
+Book mới trong form nên chưa gọi hàm này.
+
+2. APP GIỮ DANH SÁCH Ở ĐÂU?
+----------------------------
+
+File: lib/features/books/data/datasources/book_local_data_source.dart
+
+L10 là JSON mẫu đi kèm app. Dù đường dẫn có tên thư mục authors, file này chứa sách.
+L11 `List<Book>? _cache`: List là danh sách nhiều Book; cache là bản tạm trong RAM.
+null nghĩa là app chưa tải sách lần nào.
+
+L13-L29 `getBooks()` là hàm lấy danh sách chính:
+
+- L14: cache có thì trả ngay `List.of(_cache!)`. `List.of` tạo BẢN SAO để màn hình
+  không sửa nhầm danh sách cache gốc.
+- L15: chưa có cache thì đọc JSON mẫu thành danh sách tên `seed`.
+- L17: tìm file dữ liệu thật của app, giới hạn tối đa 3 giây.
+- L18-L21: chưa có file thì tạo thư mục/file rồi chép seed vào. Đây là lần chạy đầu.
+- L22-L24: file có rồi thì đọc các thay đổi cũ từ file vào cache.
+- L25-L27: đọc file lỗi thì vẫn dùng seed để app không trắng màn hình.
+- L28: trả một bản sao danh sách cache.
+
+L31-L32 `getBookById(id)`: lấy list rồi tìm Book có id đúng. Không thấy sẽ báo lỗi.
+L34-L40 `createBook`: tải list, L36 kiểm ISBN trùng, L39 tạo list mới gồm sách cũ
+và sách mới (`...books` nghĩa là chép toàn bộ list cũ), rồi lưu.
+L42-L48 `updateBook`: tìm vị trí theo id, thay phần tử ở vị trí đó, rồi lưu.
+L50-L53 `deleteBook`: giữ lại mọi Book không có id cần xóa rồi lưu.
+L55-L59 `_decode`: biến text JSON thành List<Book>.
+L61-L68 `_save`: đổi List<Book> thành JSON rồi ghi file. L67 đang bỏ qua lỗi ghi file;
+đây là điểm yếu: có thể báo thành công dù file không ghi được.
+L70-L73 `_localFile`: chỉ tạo địa chỉ file trong thư mục dữ liệu app, chưa đọc/ghi.
+
+3. PROVIDER MỚI
+---------------
+
+File: lib/features/books/presentation/providers/book_provider.dart
+
+L8 tạo nguồn đọc file.
+L9 tạo repository dùng nguồn đó.
+L10 `bookListProvider`: màn danh sách dùng nó để lấy toàn bộ List<Book>.
+L11 `bookDetailProvider`: provider MỚI. `family<Book, String>` nghĩa là mỗi id có
+một lần tải riêng. Ví dụ `bookDetailProvider('book-001')` tải đúng book-001.
+
+Provider trả ba trạng thái: đang tải, có dữ liệu, hoặc lỗi. `ref.watch` theo dõi và
+tự vẽ lại màn hình. `ref.read` chỉ lấy object để gọi lệnh, không theo dõi. `invalidate`
+nói provider bỏ kết quả cũ và tải lại ở lần watch tiếp theo.
+
+4. MÀN DANH SÁCH MỚI
+--------------------
+
+File: lib/features/books/presentation/screens/book_list_screen.dart
+
+L9 `ConsumerStatefulWidget`: cần Riverpod (`Consumer`) và cần nhớ text tìm kiếm
+(`Stateful`). L17 `_keyword` giữ chữ người dùng gõ.
+L21 `ref.watch(bookListProvider)`: yêu cầu danh sách và theo dõi kết quả.
+L47-L66 `booksAsync.when`:
+
+- L48: chưa tải xong thì quay spinner.
+- L49: lỗi thì hiện ErrorState có nút thử lại.
+- L50: có `books`, tức List<Book>, thì xử lý danh sách.
+
+L51 tạo `filtered`: lấy title + author + ISBN của mỗi sách, đổi lowercase rồi tìm
+_keyword. L52 phân biệt “chưa có sách” với “có sách nhưng search không ra”.
+L53-L64 RefreshIndicator: kéo xuống sẽ invalidate provider (L55) rồi await Future
+mới (L56), nên spinner refresh chỉ dừng khi đọc dữ liệu xong.
+L58-L63 ListView.separated: ListView dựng item khi cần; separated thêm khoảng cách
+10px giữa card. Mỗi item là `_BookCard(book: filtered[index])`.
+
+L72-L78 `_openAdd`: Navigator.push mở BookAddScreen. `await` chờ form đóng.
+BookAddScreen trả `true` khi lưu thành công. L74 kiểm true + mounted, L75 tải lại
+list, L76 hiện thông báo xanh.
+
+L81-L128 `_BookCard` là một card cho một Book.
+L87 `available = book.available > 0`: tạo bool để quyết định nhãn/màu.
+L94 bấm cả card sẽ push `BookDetailScreen(bookId: book.id)`.
+L98 lấy chữ cái đầu tên sách làm avatar; title rỗng thì dùng `?`.
+L107 hiện xanh “Còn X cuốn” hoặc đỏ “Hết sách”.
+L109-L112 nút sửa: mở BookAddScreen(book: book), tức form được nhận dữ liệu cũ.
+Nếu form trả true thì tải lại list.
+L113 gọi `_delete`.
+L121-L127 `_delete`: mở dialog true/false; Hủy thì return ở L123; đồng ý thì gọi
+repository.deleteBook(book.id), invalidate list và báo thành công.
+
+5. FORM THÊM / SỬA
+------------------
+
+File: lib/features/books/presentation/screens/book_add_screen.dart
+
+L7-L13 BookAddScreen nhận `Book? book`. Không có book là thêm; có book là sửa.
+L16 `_formKey` dùng để kiểm tra toàn bộ form.
+L17-L25 có 9 TextEditingController. Mỗi controller là nơi Flutter giữ text của một
+ô nhập. `late final` nghĩa là chắc chắn gán ở initState, và chỉ gán một lần.
+L26 `_saving` khóa nút Lưu khi đang ghi để người dùng không bấm hai lần.
+
+L29-L41 `initState`: chạy đúng một lần khi mở form. L31 lấy `widget.book`; L32-L40
+điền dữ liệu cũ nếu sửa, hoặc để ô trống nếu thêm.
+L44-L49 `dispose`: form bị đóng thì vòng for đi qua List 9 controller và gọi dispose
+từng cái, giải phóng bộ nhớ.
+
+L52-L86 là giao diện. L54 đổi tiêu đề theo thêm/sửa. L65-L79 Form chứa 9 `_field`.
+L78: saving true thì onPressed null (nút bị vô hiệu); false thì gọi `_save`.
+L88-L97 `_field`: khuôn chung tạo TextFormField. L93 chọn bàn phím số cho năm/số
+lượng. L94 chỉ báo lỗi field bắt buộc nếu text rỗng.
+
+L99-L122 `_save`:
+
+- L100 validate fail thì dừng.
+- L101 bật `_saving` để khóa nút.
+- L102-L106 tạo Book từ nội dung form. L103 giữ id cũ nếu sửa, thêm thì tạo id mới.
+- L105 dùng int.tryParse: nhập số không hợp lệ thành 0.
+- L108 lấy repository bằng ref.read.
+- L109-L113: book cũ null gọi createBook, có book gọi updateBook.
+- L114 tải lại list. L115 tải lại đúng detail provider của id này.
+- L116 đóng form và trả true cho màn gọi nó.
+- L117-L120 nếu lỗi hiện Snackbar; finally luôn mở lại nút nếu form vẫn còn tồn tại.
+
+6. MÀN CHI TIẾT MỚI
+-------------------
+
+File: lib/features/books/presentation/screens/book_detail_screen.dart
+
+L8-L10 nhận `bookId` bắt buộc; detail biết rõ phải tải sách nào.
+L14 `ref.watch(bookDetailProvider(bookId))`: gọi provider theo id này.
+L21-L24 `maybeWhen`: chỉ khi đã có Book mới hiện nút sửa; loading/error thì dùng
+SizedBox.shrink, tức không hiện gì.
+L27-L60 `.when`: spinner khi tải, text lỗi khi lỗi, có data thì vẽ hai card.
+L37-L42 card đầu là avatar/tên/tác giả. L46-L58 card thứ hai là các thông tin.
+L55 chỉ hiện mô tả nếu description không rỗng.
+L64 `_row` là khuôn một dòng “nhãn : giá trị”.
+L66-L72 `_edit`: mở cùng BookAddScreen(book: book). Nếu lưu xong, invalidate cả list
+và `bookDetailProvider(book.id)`, nên khi quay lại detail sẽ đọc dữ liệu mới.
+
+7. REPOSITORY Ở GIỮA ĐỂ LÀM GÌ?
+--------------------------------
+
+File: domain/repositories/book_repository.dart: L3-L8 chỉ định 5 việc bắt buộc.
+File: data/repositories/book_repository_impl.dart: L5-L17 chuyển từng việc xuống
+BookLocalDataSource. Hiện trông như “chuyển tiếp”, nhưng nhờ vậy sau này đổi file
+sang API thì sửa RepositoryImpl, còn ba màn hình trên không phải đổi cách gọi.

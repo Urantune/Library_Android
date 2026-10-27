@@ -1,0 +1,36 @@
+XÁC THỰC — PRM-006, PRM-007, PRM-008
+=====================================
+
+ĐÃ CÓ HẠ TẦNG TOKEN
+
+lib/core/auth/token_storage.dart:3-15
+  TokenStorage bọc FlutterSecureStorage. readAccessToken/readRefreshToken đọc hai
+  key. saveTokens ghi access và refresh token. clear dùng deleteAll để xóa phiên.
+  Dùng secure storage thay SharedPreferences vì token là dữ liệu nhạy cảm.
+
+lib/core/auth/auth_session.dart:5-27
+  refreshAccessToken(): đọc refresh token; rỗng thì trả null. Có token thì POST
+  /api/auth/refresh với extra skipAuth để interceptor không gắn access token cũ.
+  Response được đọc theo accessToken/access_token, lưu token mới. catch xóa token
+  và trả null để caller biết không thể khôi phục phiên.
+
+lib/core/network/auth_interceptor.dart:14-30
+  Request bình thường thêm Bearer token. 401 -> refreshAccessToken -> retry một
+  lần nhờ extra['retried']; QueuedInterceptor tránh refresh đồng thời.
+
+CHƯA CÓ LUỒNG END-TO-END
+
+PRM-006 Login: không có LoginScreen, submit credentials hay API login.
+PRM-007 Register: không có RegisterScreen/API register.
+PRM-008 Logout UI: AuthSession.logout có code nhưng chưa thấy button gọi nó.
+Profile hiện hard-code user-001, chưa lấy user của phiên đăng nhập.
+
+CHI TIẾT LỆNH CHẠY
+
+token_storage.dart:4 nhận optional storage để test có thể inject fake; production
+dùng FlutterSecureStorage mặc định. 8-9 là key cố định. 10-14 trả Future vì gọi
+platform storage. auth_session.dart:10 await refresh token; 11 return sớm nếu rỗng.
+14 POST với skipAuth. 15-17 chấp nhận response có/không bọc data. 18-22 đọc hai
+cách đặt tên token và lưu token mới. auth_interceptor.dart:12-17 chạy trước mạng,
+handler.next chuyển request tiếp. 21 chặn retry vô hạn; 22 refresh; 24-26 đánh dấu
+retried và handler.resolve response retry.

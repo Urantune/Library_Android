@@ -1,0 +1,21 @@
+TÀI LIỆU LIB THEO PRM BACKLOG
+==============================
+
+Nguồn phân nhóm: sheet PRM trong Backlog_PRM_MSS.xlsm.
+Mỗi file dưới đây ứng với một Nhóm chức năng của PRM backlog:
+
+01_nen_tang.txt       PRM-001,002,003,004,005
+02_xac_thuc.txt       PRM-006,007,008
+03_sach.txt            PRM-011..014
+04_tac_gia.txt         PRM-015..018
+05_the_loai.txt        PRM-019..022
+06_nha_xuat_ban.txt    PRM-023..026
+07_nguoi_dung.txt      PRM-027..030
+08_muon_tra.txt        PRM-031,032
+09_dat_truoc_qr.txt    PRM-033,034
+10_thong_bao.txt       PRM-035
+11_trang_chu_ho_so.txt PRM-009,010
+12_kiem_thu.txt        PRM-036..040
+
+Quy ước: “ĐÃ CÓ” mô tả code trong lib hiện tại; “CHƯA CÓ” nghĩa là PRM backlog
+có task nhưng lib chưa có luồng/chức năng tương ứng. Dòng nêu theo file hiện tại.

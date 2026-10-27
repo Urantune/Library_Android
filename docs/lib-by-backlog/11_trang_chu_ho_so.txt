@@ -1,0 +1,27 @@
+TRANG CHỦ VÀ HỒ SƠ — PRM-009, PRM-010
+======================================
+
+lib/app/library_app.dart:42-141
+  DashboardPage giữ bottom tab. _buildBottomNavPage: 0 DashboardHome, 1 Users,
+  2 Notifications, 3 Profile. BottomNavBar gọi callback; parent setState đổi tab.
+
+lib/features/bottom_nav/bottom_nav_bar.dart:3-133
+  Nhận currentIndex/onTap, không tự route. _NavTile stateful chỉ để hover animation.
+
+lib/app/library_app.dart:373-406
+  DashboardHome đọc DateTime.now để in ngày. StatsRow/PopularBooksSection dùng số
+  và book hard-code, nên chưa đạt Home dữ liệu thật theo tiêu chí backlog.
+
+profile_screen.dart:8-324
+  ConsumerWidget watch userDetailProvider('user-001'), rồi AsyncValue.when render
+  loading/error/profile. Nút edit push UserFormScreen(user: user). Vì id cố định,
+  đây chưa phải profile end-to-end gắn AuthSession/login.
+
+CHI TIẾT LỆNH CHẠY
+
+DashboardHome.build lấy DateTime.now mỗi lần build để render ngày. `const StatsRow`
+không rebuild cấu hình widget khi parent rebuild. ProfileScreen dùng
+`ref.watch(userDetailProvider('user-001'))`; provider trả AsyncValue, `.when` chọn
+spinner/error/_ProfileContent. Nút edit push UserFormScreen với object hiện tại;
+form update local storage rồi invalidate list, nhưng Profile không invalidate detail
+sau pop nên có thể cần refresh/re-enter để thấy data mới.

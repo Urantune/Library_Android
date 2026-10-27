@@ -1,0 +1,23 @@
+THÔNG BÁO — PRM-035
+===================
+
+notification_list_screen.dart:3-254
+  NotificationItem là model chỉ dùng màn này. _notifications là List mock trong
+  _NotificationListScreenState, nên dữ liệu mất khi State bị hủy.
+
+  Nút "Đọc tất cả": vòng for tạo NotificationItem mới với isRead true rồi setState;
+  setState báo Flutter build lại để card đổi border/font. Click từng card làm tương
+  tự cho item tại index. RefreshIndicator chỉ Future.delayed(500ms), không fetch.
+
+  _NotificationCard switch item.type chọn icon/màu. _formatTimestamp lấy
+  DateTime.now().difference(timestamp) và đổi thành phút/giờ/ngày trước.
+
+Theo backlog, push notification/FCM và API chưa có; hiện chỉ là in-app mock UI.
+
+CHI TIẾT LỆNH CHẠY
+
+State khởi tạo `_notifications` một lần. Khi bấm Đọc tất cả, vòng for không sửa
+field của object cũ (field final) mà thay mỗi index bằng NotificationItem mới có
+isRead true, rồi setState. Click một card làm y hệt cho index đó. Future.delayed
+trong onRefresh chỉ tạo cảm giác tải lại. `_formatTimestamp` tính duration từ now;
+if minutes < 60, else hours < 24, else days.
