@@ -1,14 +1,21 @@
+import '../../../../core/network/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/datasources/book_local_data_source.dart';
+import '../../data/datasources/book_remote_data_source.dart';
 import '../../data/repositories/book_repository_impl.dart';
 import '../../domain/entities/book.dart';
 import '../../domain/repositories/book_repository.dart';
 
 final bookLocalDataSourceProvider =
     Provider<BookLocalDataSource>((ref) => BookLocalDataSource());
+final bookRemoteDataSourceProvider =
+    Provider<BookRemoteDataSource>((ref) => BookRemoteDataSource(ApiClient.catalogDio));
 final bookRepositoryProvider = Provider<BookRepository>(
-    (ref) => BookRepositoryImpl(ref.watch(bookLocalDataSourceProvider)));
+    (ref) => BookRepositoryImpl(
+          ref.watch(bookLocalDataSourceProvider),
+          remote: ref.watch(bookRemoteDataSourceProvider),
+        ));
 final bookListProvider = FutureProvider<List<Book>>(
     (ref) => ref.watch(bookRepositoryProvider).getBooks());
 final bookDetailProvider = FutureProvider.family<Book, String>(

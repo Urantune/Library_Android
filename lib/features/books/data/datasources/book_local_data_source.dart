@@ -15,7 +15,7 @@ class BookLocalDataSource {
   })  : _fileResolver = fileResolver,
         _seedLoader = seedLoader;
 
-  static const _assetPath = 'assets/data/authors/urantune.json';
+  static const _assetPath = 'assets/data/books/dpk_seed_books.json';
   final Future<File> Function()? _fileResolver;
   final Future<String> Function()? _seedLoader;
   List<Book>? _cache;
@@ -127,6 +127,6 @@ class BookLocalDataSource {
     if (_fileResolver != null) return _fileResolver!();
     final directory = await getApplicationSupportDirectory();
     return File(
-        '${directory.path}${Platform.pathSeparator}books${Platform.pathSeparator}urantune.json');
+        '${directory.path}${Platform.pathSeparator}books${Platform.pathSeparator}dpk_seed_books.json');
   }
 }

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "book-001",
+    "title": "Dế Mèn phiêu lưu ký",
+    "author": "Tô Hoài",
+    "category": "Văn học",
+    "publisher": "Kim Đồng",
+    "isbn": "9786042289001",
+    "year": 2017,
+    "quantity": 12,
+    "available": 8,
+    "description": "Tác phẩm kinh điển dành cho thiếu nhi."
+  },
+  {
+    "id": "book-002",
+    "title": "Nhà giả kim",
+    "author": "Paulo Coelho",
+    "category": "Tiểu thuyết",
+    "publisher": "Nhã Nam",
+    "isbn": "9786045663228",
+    "year": 2015,
+    "quantity": 10,
+    "available": 5,
+    "description": "Hành trình theo đuổi ước mơ."
+  },
+  {
+    "id": "book-003",
+    "title": "Đắc nhân tâm",
+    "author": "Dale Carnegie",
+    "category": "Kỹ năng sống",
+    "publisher": "Trẻ",
+    "isbn": "9786041190780",
+    "year": 2020,
+    "quantity": 8,
+    "available": 0,
+    "description": "Nghệ thuật giao tiếp và ứng xử."
+  },
+  {
+    "id": "book-004",
+    "title": "Clean Code",
+    "author": "Robert C. Martin",
+    "category": "Công nghệ",
+    "publisher": "O'Reilly",
+    "isbn": "9780132350884",
+    "year": 2019,
+    "quantity": 6,
+    "available": 2,
+    "description": "Cẩm nang viết mã sạch."
+  },
+  {
+    "id": "book-005",
+    "title": "Effective Java",
+    "author": "Joshua Bloch",
+    "category": "Công nghệ",
+    "publisher": "Addison-Wesley",
+    "isbn": "9780134685991",
+    "year": 2018,
+    "quantity": 7,
+    "available": 7,
+    "description": "Các thực hành tốt để xây dựng ứng dụng Java."
+  }
+]
