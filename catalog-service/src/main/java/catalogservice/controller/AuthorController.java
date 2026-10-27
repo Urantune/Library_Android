@@ -41,7 +41,7 @@ public class AuthorController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ResponseAPI<AuthorResponse>> getDepartmentById(@PathVariable String id) {
+    public ResponseEntity<ResponseAPI<AuthorResponse>> getAuthorById(@PathVariable String id) {
         ResponseAPI<AuthorResponse> response =
                 ResponseAPI.<AuthorResponse>builder()
                         .message("Department retrieved successfully")
@@ -50,6 +50,4 @@ public class AuthorController {
                         .build();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
-
-
 }
