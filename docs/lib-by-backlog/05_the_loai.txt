@@ -1,0 +1,36 @@
+CRUD THỂ LOẠI — PRM-019, PRM-020, PRM-021, PRM-022
+====================================================
+
+LƯU ĐỒ: CategoryScreen -> ChangeNotifierProvider -> CategoryProvider
+-> CategoryStorageService -> file ApplicationSupport hoặc asset JSON.
+
+book_category.dart:2-35
+  Model id/name/description/bookCount; fromJson/toJson; copyWith chỉ đổi name/desc.
+
+category_storage_service.dart:16-65
+  Asset read-only nên load() copy seed trongtungcanh.json sang ApplicationSupport
+  lần đầu; các lần sau đọc file thật. save dùng JsonEncoder.withIndent để dễ xem.
+
+category_provider.dart:13-145
+  Giữ _all, loading, error, query, current page. filtered/pageItems là getter tính
+  lại từ state. add/update/delete save file trước, gán _all rồi notifyListeners.
+  _disposed tránh notify sau dispose trong async flow.
+
+category_screen.dart:18-221
+  `CategoryProvider(...)..load()` dùng cascade: tạo object xong gọi load trên nó.
+  context.watch rebuild khi provider notify. _onCreate/_onEdit/_onDelete mở dialog,
+  gọi provider và hiện SnackBar.
+
+widgets/category_*.dart
+  Header/toolbar/table/row/pagination/form/delete-dialog được tách để screen chỉ
+  điều phối logic. Nút chi tiết CategoryRow có UI nhưng CategoryScreen chưa truyền
+  callback onDetail, nên click hiện không làm gì.
+
+CHI TIẾT LỆNH CHẠY
+
+category_storage_service.dart:20-23 lấy app-support dir và pathSeparator; 30-41
+exists ? read : đọc seed/create/write. category_provider.dart:32-36 lowercase query,
+38-49 tính trang bằng integer division, skip/take. 62-82 bật loading/notify, await
+storage, gán data/error rồi notify. 98-107 add max id + 1 và chỉ đổi _all sau save.
+111-128 trả enum notFound/unchanged/updated. category_screen.dart:28-30 cascade
+`..load()` gọi load ngay sau constructor; 194 context.watch đăng ký rebuild.

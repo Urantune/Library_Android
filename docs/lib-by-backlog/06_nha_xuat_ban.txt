@@ -1,0 +1,50 @@
+CRUD NHÀ XUẤT BẢN — PRM-023, PRM-024, PRM-025, PRM-026
+========================================================
+
+LƯU ĐỒ HIỆN TẠI: Sidebar index 4 -> PublisherListScreen -> PublisherService
+-> useMock true -> rootBundle JSON -> Publisher.fromJson -> FutureBuilder list.
+
+publisher.dart:5-68
+  Publisher là model immutable. fromJson dùng int.tryParse(... ) ?? 0 để chịu id
+  dạng String/int lỗi, và ?.toString() ?? '' để UI không nhận null.
+
+publisher_service.dart:11-220
+  `static const bool useMock = true` quyết định nhánh chạy hiện tại. true gọi
+  _getPublishersFromMock: loadString -> jsonDecode -> map Publisher.fromJson.
+  false mới gọi http.get(baseUrl). getPublisherById dùng firstWhere, không thấy
+  thì throw; FutureBuilder sẽ nhận snapshot.hasError. API branch có GET list và
+  GET /:id; 10.0.2.2 chỉ phù hợp Android Emulator.
+
+publisher_list_screen.dart:12-466
+  StatefulWidget giữ late Future _publishersFuture. initState gọi _loadPublishers
+  đúng một lần, tránh đọc lại qua mọi build. Refresh dùng setState gán Future mới.
+  FutureBuilder render waiting/error/empty/success. ListView.builder dựng card
+  khi cần. Click card Navigator.push PublisherDetailScreen(publisherId).
+
+publisher_detail_screen.dart:21-228
+  required publisherId bắt caller phải truyền id. initState tải detail một lần;
+  FutureBuilder render loading/error/data.
+
+Theo backlog, app mới có GET list/detail mock/API. Chưa có form POST, PUT, DELETE
+hay confirm delete. Publisher cũng chưa dùng Riverpod/repository như các feature khác.
+
+CHI TIẾT THEO KHỐI LỆNH
+
+publisher_service.dart:14 `static const bool useMock = true` là công tắc hiện tại.
+31-37 getPublishers: true return mock ngay, false return API. 47-53 lặp logic đó
+cho một id. 63-80: loadString trả Future<String>, jsonDecode tạo List<dynamic>,
+map gọi Publisher.fromJson từng row và toList materialize kết quả. 91-103 firstWhere
+trả Publisher đầu tiên trùng id; catch đổi StateError thành Exception tiếng Việt.
+116-148 GET list API: chỉ status 200 parse, mọi status khác throw. 166-220 GET
+detail: 200 parse Map, 404 báo not found, status khác báo lỗi chung.
+
+publisher_list_screen.dart:22 service là field nên không tạo lại khi build. 29 dùng
+late vì Future chỉ có sau initState. 32-36 initState chạy đúng một lần. 43 gán Future
+nhưng không setState vì build đầu tiên sắp diễn ra; 49-53 refresh phải setState để
+FutureBuilder nhận Future mới. Builder kiểm tra waiting trước, rồi hasError, rồi
+empty, cuối cùng ListView. `ListView.builder` chỉ dựng item đang nhìn thấy. onTap
+gọi Navigator.push và truyền id, nghĩa là detail tự đọc nguồn thay vì dùng row cũ.
+
+publisher_detail_screen.dart:31 input id nằm trong `widget`, không được sửa trong
+State. 55-65 tạo Future một lần. FutureBuilder chạy lại khi Future xong; thứ tự
+waiting -> error -> null -> data tránh dùng snapshot.data quá sớm.

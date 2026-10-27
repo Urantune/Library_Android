@@ -1,0 +1,41 @@
+CRUD TÁC GIẢ — PRM-015, PRM-016, PRM-017, PRM-018
+====================================================
+
+LƯU ĐỒ: AuthorListScreen -> authorListProvider -> AuthorRepositoryImpl
+-> AuthorLocalDataSource -> SharedPreferences hoặc asset trikycuc.json.
+
+author.dart:2-72
+  Entity Author. fromJson hỗ trợ camelCase/snake_case; _parseDate dùng tryParse
+  để dữ liệu ngày sai không làm crash; toJson chuẩn hóa ngày sinh yyyy-MM-dd.
+
+author_local_data_source.dart:9-107
+  getAuthors ưu tiên key authors_data trong SharedPreferences. Lần đầu đọc asset,
+  decode rồi lưu bản working copy. CRUD load cả list -> kiểm tra id -> thay đổi ->
+  jsonEncode -> setString.
+
+author_provider.dart:8-24
+  authorListProvider tải danh sách. authorDetailProvider là FutureProvider.family:
+  mỗi authorId có Future riêng.
+
+author_list_screen.dart:9-278
+  ref.watch list; keyword lọc local; click card push AuthorDetailScreen. Nút thêm
+  push AuthorAddScreen, nhận true thì invalidate list. Pull refresh cũng invalidate.
+
+author_add_screen.dart:18-281
+  Controllers giữ text form và dispose để giải phóng. _formKey.validate chặn input
+  thiếu. _saveAuthor tạo id theo microseconds, gọi createAuthor, pop(true).
+
+author_detail_screen.dart:8-223
+  Watch provider theo authorId, rồi .when loading/error/data và render chi tiết.
+
+Theo backlog có sửa/xóa nhưng UI hiện chỉ có danh sách, detail và thêm; chưa có
+nút sửa/xóa Author gọi repository.
+
+CHI TIẾT LỆNH CHẠY
+
+author_local_data_source.dart:14 lấy prefs, 15 đọc key; 18-20 return dữ liệu đã lưu,
+23-29 là first-run asset -> decode -> save. 33-45 kiểm JSON là List trước map, nên
+file sai schema throw rõ ràng. author_list_screen.dart:39-53 await Navigator.push;
+added true mới invalidate và `mounted` ngăn dùng context đã dispose. 95-102 filter
+local. author_add_screen.dart:28-34 dispose controller; 39-57 date picker; 60-107
+validate -> bật loading -> create -> invalidate -> pop(true) -> finally tắt loading.

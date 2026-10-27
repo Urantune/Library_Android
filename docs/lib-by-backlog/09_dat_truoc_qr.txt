@@ -1,0 +1,8 @@
+ĐẶT TRƯỚC VÀ QR — PRM-033, PRM-034
+==================================
+
+CHƯA CÓ CODE FEATURE TRONG lib.
+
+Sidebar có index 7 "Đặt trước" nhưng _buildPage không có case 7, nên hiện đến
+_PlaceholderPage. Không thấy Reservation entity/service/screen hoặc thư viện
+camera/QR scanner trong lib/pubspec. Vì vậy chưa có code chạy cho reservation/QR.

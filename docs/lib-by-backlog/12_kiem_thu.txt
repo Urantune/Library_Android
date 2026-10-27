@@ -1,0 +1,13 @@
+KIỂM THỬ — PRM-036, PRM-037, PRM-038, PRM-039, PRM-040
+========================================================
+
+Test không nằm trong lib mà ở test/, nên không có luồng runtime production.
+
+Các test hiện có: Book entity, User entity/local source/list/detail/form, và
+NotificationListScreen. Test chạy với `flutter test`; Flutter tạo môi trường test,
+gọi test case, so expected với actual rồi pass/fail.
+
+Đã kiểm tra `flutter analyze lib`: không trả diagnostic compile/lint. Tuy nhiên
+backlog yêu cầu test CRUD Books/Authors/Category/Publisher/QR/Auth; coverage hiện
+chưa đủ cho toàn bộ các module này, nhất là Author CRUD, Category CRUD, Publisher
+service/screens và các feature chưa triển khai.

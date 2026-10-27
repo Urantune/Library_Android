@@ -1,0 +1,46 @@
+NỀN TẢNG — PRM-001, PRM-002, PRM-003, PRM-004, PRM-005
+=========================================================
+
+ĐÃ CÓ
+
+lib/main.dart:6
+  runApp(const ProviderScope(child: LibraryApp())). Đây là lệnh đầu tiên của app.
+  ProviderScope tạo vùng Riverpod, nên các ref.watch/ref.read phía dưới chạy được.
+
+lib/app/library_app.dart:23-38
+  LibraryApp là StatelessWidget vì chỉ dựng MaterialApp cố định. MaterialApp cấp
+  theme, Navigator và home: DashboardPage(). AppColors ở dòng 13-21 là màu hằng;
+  static const giúp gọi lại không tạo object mới.
+
+lib/app/library_app.dart:42-141
+  DashboardPage là StatefulWidget vì _selectedIndex và _bottomNavIndex đổi theo
+  click. Sidebar.onSelected -> setState -> build -> _buildPage() switch index ->
+  đúng màn hình. AnimatedSwitcher + ValueKey tạo chuyển cảnh đúng state.
+
+lib/core/network/api_client.dart:7-21
+  ApiClient.create tạo Dio có baseUrl, timeout, Accept JSON và gắn AuthInterceptor.
+  10.0.2.2 là localhost máy host khi chạy Android Emulator.
+
+lib/core/network/auth_interceptor.dart:6-31
+  onRequest đọc access token rồi thêm Authorization. onError chỉ xử lý 401 chưa
+  retry: refresh token, gắn token mới, fetch lại request đúng một lần.
+
+lib/features/*/presentation/providers
+  Books/Authors/Users đã có Riverpod Provider -> Repository -> FutureProvider.
+  ref.watch làm màn hình nghe dữ liệu; ref.invalidate yêu cầu tải lại.
+
+CHƯA HOÀN THÀNH THEO BACKLOG
+
+PRM-002: chưa có bộ common widget/loading/error thống nhất; mỗi feature tự viết UI.
+PRM-004: go_router có trong pubspec nhưng chưa được gọi. Điều hướng hiện là switch
+index và Navigator.push; chưa có route guard theo quyền.
+PRM-005: Riverpod không thống nhất toàn app: Category dùng provider/ChangeNotifier.
+
+CHI TIẾT LỆNH CHẠY
+
+main.dart:1-4 là import, chỉ làm symbol khả dụng; chưa render UI. main.dart:6 gọi
+runApp; framework sau đó gọi LibraryApp.build. library_app.dart:27-37 dựng MaterialApp,
+theme trở thành cấu hình chung cho mọi child. 57 khởi tạo selectedIndex=0 nên build
+đầu trả DashboardHome. 64-75 switch tab đáy, 77-102 switch sidebar. 115-120 callback
+nhận index, setState đánh dấu State dirty và Flutter schedule build. 126-136
+AnimatedSwitcher so ValueKey để biết child mới thật sự khác child cũ.
