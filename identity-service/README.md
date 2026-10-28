@@ -18,6 +18,6 @@ Request body limit: 8 KiB. Login: 30 requests/IP/minute and 5 failed attempts/ac
 
 Error responses contain status/code/message/fieldErrors/traceId without stack traces, passwords or tokens. Login failure is generic. JDBC values are bound parameters. Client roles are ignored on registration. CSRF cookies are not used: authentication is stateless Bearer-header based. Production requires HTTPS; Android cleartext permission is enabled only for debug/profile builds.
 
-Android: `flutter run --dart-define=AUTH_BASE_URL=http://10.0.2.2:8081`; physical device: replace with the host LAN address. When Gateway is available, change AUTH_BASE_URL to its URL. The app persists only tokens when Remember is checked and keeps them in memory otherwise. No mock-account fallback is used.
+Android emulator defaults to `http://10.0.2.2:8081`; desktop/web defaults to `http://127.0.0.1:8081`. Override using `flutter run --dart-define=AUTH_BASE_URL=http://your-host:8081`; a physical device needs the host LAN address. When Gateway is available, change AUTH_BASE_URL to its URL. The app persists only tokens when Remember is checked and keeps them in memory otherwise. No mock-account fallback is used.
 
 Tests: `mvnw.cmd test` in this module (temporary SQLite DBs under target). Security rationale follows [OWASP authentication guidance](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html) and [Spring Security JWT validation](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html).

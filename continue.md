@@ -18,10 +18,12 @@ Backend: identity-service Java 21/Spring Boot 4.1.1, SQLite users/roles/refresh_
 API: POST /api/auth/register,login,refresh,logout; GET /api/users/me. Register trả user 201/MEMBER, sau đó login. Session response accessToken/refreshToken/expiresIn/user.
 Chống spam: login 30/IP/phút, register 5/IP/giờ, 5 lần sai/account/5 phút, refresh/logout 60/IP/phút; request body 8KiB; Retry-After 429; không tin X-Forwarded-For tùy ý. Exception không trả stacktrace/token/password.
 Kiểm chứng backend: 9 Maven tests passed trên SQLite thật. Live test Flutter Dio -> Java đang chạy -> SQLite riêng cũng passed toàn bộ register/login/restore/refresh/logout và token cũ 401.
-Android: đã thay MockAuthService bằng ApiAuthService, shared Riverpod session, route guard, nhớ phiên secure storage hoặc memory, single-flight refresh; UI responsive đang kiểm tra cuối. Auth base URL tạm direct Identity 8081 vì Gateway chưa có, cấu hình bằng AUTH_BASE_URL.
+Android: đã thay MockAuthService bằng ApiAuthService, shared Riverpod session, route guard, nhớ phiên secure storage hoặc memory, single-flight refresh; UI responsive đã kiểm tra mobile/desktop. Auth base URL direct Identity 8081, cấu hình bằng AUTH_BASE_URL; Android emulator mặc định 10.0.2.2, desktop/web 127.0.0.1.
 Chạy backend: powershell -ExecutionPolicy Bypass -File ./run-auth.ps1 từ SERVER_ROOT; dữ liệu mặc định identity-service/data/identity.db, RSA keys data/auth-keys không commit. Android debug emulator AUTH_BASE_URL=http://10.0.2.2:8081; máy thật dùng LAN IP.
 Chưa làm: quyền/revocation của toàn bộ domain services/Gateway, các module ngoài Khang; không coi giới hạn request này là chống DDoS tuyệt đối.
-Bước tiếp: chốt test/UI/APK, commit Android và cập nhật bàn giao; giữ nguyên sáu block khác.
+Kiểm chứng Android: toàn bộ 81 tests passed, 1 live test skip mặc định; live test đã chạy riêng và passed với Spring Boot thật. Analyze các file auth/integration không có lỗi. APK đang chờ Gradle, chưa xác nhận build thành công.
+Commit: Android 7225931 BEta sign; Server a7d7c90 triển khai Identity, bàn giao cập nhật trong commit BEta sign. Backend local đang phục vụ cổng 8081, dữ liệu thật data/identity.db.
+Bước tiếp: hoàn tất build APK và chạy thử trên emulator/thiết bị. Giữ nguyên sáu block khác; chỉ mở rộng phần của Khang theo code thực tế và yêu cầu trực tiếp.
 ===== HET NGUOI 1 =====
 
 ===== NGUOI 2 - Đỗ Trọng Trí =====
