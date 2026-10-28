@@ -6,11 +6,13 @@ import '../providers/user_provider.dart';
 import 'user_form_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+  final String userId;
+
+  const ProfileScreen({super.key, this.userId = 'user-001'});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(userDetailProvider('user-001'));
+    final userAsync = ref.watch(userDetailProvider(userId));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
@@ -35,7 +37,7 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () =>
-                      ref.invalidate(userDetailProvider('user-001')),
+                      ref.invalidate(userDetailProvider(userId)),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Thử lại'),
                 ),

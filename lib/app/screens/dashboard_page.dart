@@ -29,7 +29,7 @@ class DashboardPage extends StatelessWidget {
       case 2:
         return const NotificationListScreen();
       case 3:
-        return const ProfileScreen();
+        return const ProfileScreen(userId: 'user-001');
       case 0:
       default:
         return const DashboardHome();
