@@ -11,18 +11,19 @@ Contract hướng dẫn hiện tại: LM-1.1.1.
 Khởi tạo file này không có nghĩa tính năng của bất kỳ thành viên nào đã hoàn thành. Các phần chưa có bàn giao phải kiểm tra source thực tế.
 
 ===== NGUOI 1 - Dương Phúc Khang =====
-Cập nhật: 2026-10-22. Contract LM-1.1.1.
-Mốc khoảng 50% theo 8/16 task, không phải phần trăm điểm chấm hay end-to-end production.
-PRM-011/012/013: demo-ready. Sách list/detail có phân trang/search/retry; form thêm/sửa validate required/year/stock; giữ fake urantune.json, mapper API riêng, chưa gọi server.
-MSS-009/010/011/012/013: API local verified. UUID String, Flyway migration Book, UTC TEXT Book-only converter; GET list/detail, POST create, PUT metadata, DELETE soft INACTIVE; check ISBN duplicate và field errors.
-Phạm vi đã thu lại đúng yêu cầu: code Author/Category/Publisher và repositories + TimestampedEntity shared được hoàn nguyên đúng baseline 0d99ca2. Book mapper trả publisher/authors/categories=null, không đọc domain khác. Không cập nhật liên kết cũ; publisher_id chỉ đọc từ Book. Nonempty references khi ghi trả 409 RELATION_NOT_READY để không âm thầm bỏ dữ liệu.
-Android JSON: ghi file tạm rồi rename; cache chỉ cập nhật sau khi lưu thành công; serialize các mutation; lỗi file/trùng ISBN/corrupt JSON hiển thị thay vì báo thành công giả.
-Hàm chính: BookReadService.list/detail; BookWriteService.create/update/deactivate; BookMapper.toResponse; BookLocalDataSource createBook/updateBook/deleteBook; BookPage.fromBooks; BookDto.toDomain.
-Kiểm chứng: Maven catalog-service test 14 passed trên SQLite thật (13 book + 1 context), bao gồm quan hệ cũ được giữ nguyên khi sửa metadata. Flutter test test/features/books 22 passed; analyze lib/features/books test/features/books no issues.
-Git: Android 1514c76; code Server c6025f7, trạng thái mới nhất nằm ở commit bàn giao hiện tại. Tổng đợt này 6 commit, dưới giới hạn 14; tên bắt đầu bằng hai chữ hoa. Email author khangphucmn@outlook.com. Người dùng đã cho phép tiếp tục Git.
-Chưa làm/không nhận hoàn tất: auth/gateway/RBAC, Redis, Kafka, search/filter server MSS-040, remote repository tích hợp, Swagger toàn service. Không coi direct APIs là đã bảo vệ quyền; chỉ local dev đến khi owner security tích hợp.
-MSS local sạch, nhánh/upstream Server; không còn Dart/pubspec/Flutter. Android local nhánh/upstream Android. Pull ff-only để tránh tự merge nhầm. Backup bị trộn đã vào Recycle Bin; hai worktree tạm khang-android/server-history-merge đã dọn sau khi xác nhận không chứa code chưa lưu. Các thay đổi local có từ trước ở LibPRM được giữ nguyên.
-Bước sau: tiếp tục đúng task Khang còn lại khi được giao; chỉ kết nối quan hệ khi owner domain sẵn. Bản bàn giao này được commit/push lên Server; không cần làm lại phần đã kiểm chứng để tăng số commit.
+Cập nhật 2026-10-28; backlog mới Backlog_PRM_MSS_Group3.xlsm ở workspace root đã chuyển PRM-006/007/008 cho Khang.
+Đã giữ phần Book trước: CRUD SQLite, phân trang, mapper quan hệ null theo yêu cầu; không sửa module người khác trong đợt auth này.
+Phạm vi mới: PRM-003/006/007/008 và backend Identity hỗ trợ end-to-end theo yêu cầu trực tiếp. Reuse features/sign, core/auth/network; không tạo feature auth trùng.
+Backend: identity-service Java 21/Spring Boot 4.1.1, SQLite users/roles/refresh_tokens + migration auth_sessions/auth_throttle. JdbcTemplate bind parameters, BCrypt 12, RSA JWT, refresh SHA256 + rotation/reuse detection; logout revoke session và access trong Identity.
+API: POST /api/auth/register,login,refresh,logout; GET /api/users/me. Register trả user 201/MEMBER, sau đó login. Session response accessToken/refreshToken/expiresIn/user.
+Chống spam: login 30/IP/phút, register 5/IP/giờ, 5 lần sai/account/5 phút, refresh/logout 60/IP/phút; request body 8KiB; Retry-After 429; không tin X-Forwarded-For tùy ý. Exception không trả stacktrace/token/password.
+Kiểm chứng backend: 9 Maven tests passed trên SQLite thật. Live test Flutter Dio -> Java đang chạy -> SQLite riêng cũng passed toàn bộ register/login/restore/refresh/logout và token cũ 401.
+Android: đã thay MockAuthService bằng ApiAuthService, shared Riverpod session, route guard, nhớ phiên secure storage hoặc memory, single-flight refresh; UI responsive đã kiểm tra mobile/desktop. Auth base URL direct Identity 8081, cấu hình bằng AUTH_BASE_URL; Android emulator mặc định 10.0.2.2, desktop/web 127.0.0.1.
+Chạy backend: powershell -ExecutionPolicy Bypass -File ./run-auth.ps1 từ SERVER_ROOT; dữ liệu mặc định identity-service/data/identity.db, RSA keys data/auth-keys không commit. Android debug emulator AUTH_BASE_URL=http://10.0.2.2:8081; máy thật dùng LAN IP.
+Chưa làm: quyền/revocation của toàn bộ domain services/Gateway, các module ngoài Khang; không coi giới hạn request này là chống DDoS tuyệt đối.
+Kiểm chứng Android: toàn bộ 81 tests passed, 1 live test skip mặc định; live test đã chạy riêng và passed với Spring Boot thật. Analyze các file auth/integration không có lỗi. APK đang chờ Gradle, chưa xác nhận build thành công.
+Commit: Android 7225931 BEta sign; Server a7d7c90 triển khai Identity, bàn giao cập nhật trong commit BEta sign. Backend local đang phục vụ cổng 8081, dữ liệu thật data/identity.db.
+Bước tiếp: hoàn tất build APK và chạy thử trên emulator/thiết bị. Giữ nguyên sáu block khác; chỉ mở rộng phần của Khang theo code thực tế và yêu cầu trực tiếp.
 ===== HET NGUOI 1 =====
 
 ===== NGUOI 2 - Đỗ Trọng Trí =====
