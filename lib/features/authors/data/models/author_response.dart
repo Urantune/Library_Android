@@ -21,14 +21,20 @@ class AuthorResponse {
 
   factory AuthorResponse.fromJson(Map<String, dynamic> json) {
     return AuthorResponse(
-       id: json['id']?.toString() ?? '',
+      id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       bio: json['bio'],
-      birthDate: json['birthDate'] != null ? DateTime.tryParse(json['birthDate']) : null,
+      birthDate: json['birthDate'] != null
+          ? DateTime.tryParse(json['birthDate'])
+          : null,
       country: json['country'],
       status: json['status'] ?? '',
-      createAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
-updateAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at']) : null,
+      createAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+          : null,
+      updateAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'])
+          : null,
     );
   }
 }
@@ -63,7 +69,8 @@ class PageDTO<T> {
       totalElements: json['totalElements'] ?? 0,
       first: json['first'] ?? false,
       last: json['last'] ?? false,
-      content: (json['content'] as List?)?.map((e) => fromJsonT(e)).toList() ?? [],
+      content:
+          (json['content'] as List?)?.map((e) => fromJsonT(e)).toList() ?? [],
     );
   }
 }
