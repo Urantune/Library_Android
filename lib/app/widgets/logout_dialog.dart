@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../app_router.dart';
+import '../../features/sign/controllers/auth_controller.dart';
 import '../providers/navigation_provider.dart';
 import '../theme/app_colors.dart';
 
-/// Hiện pop-up xác nhận. Nếu chọn "Rời Đi" thì quay về màn hình đăng nhập.
 Future<void> confirmLogout(BuildContext context) async {
   final leave = await showDialog<bool>(
     context: context,
@@ -14,9 +13,11 @@ Future<void> confirmLogout(BuildContext context) async {
   );
   if (leave != true || !context.mounted) return;
 
-  // Đưa dashboard về trang chủ để lần đăng nhập sau không bị kẹt ở mục cũ.
-  context.read<NavigationProvider>().goToDashboard();
-  context.go(AppRoutes.login);
+  final navigation = context.read<NavigationProvider>();
+  final controller = ProviderScope.containerOf(context, listen: false)
+      .read(authControllerProvider.notifier);
+  await controller.logout();
+  navigation.goToDashboard();
 }
 
 class _LogoutDialog extends StatelessWidget {
@@ -33,7 +34,8 @@ class _LogoutDialog extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.logout_rounded, size: 40, color: AppColors.primary),
+              const Icon(Icons.logout_rounded,
+                  size: 40, color: AppColors.primary),
               const SizedBox(height: 16),
               const Text(
                 'Quý đọc giả muốn rời khỏi thư viện?',

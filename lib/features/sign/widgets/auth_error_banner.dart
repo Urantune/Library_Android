@@ -13,9 +13,9 @@ class AuthErrorBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AuthColors.error.withOpacity(0.08),
+        color: AuthColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AuthColors.error.withOpacity(0.3)),
+        border: Border.all(color: AuthColors.error.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

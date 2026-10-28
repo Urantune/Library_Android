@@ -1,60 +1,117 @@
-import 'package:flutter/foundation.dart';
-
-import '../constants/auth_constants.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/auth/token_storage.dart';
+import '../../../core/config/auth_config.dart';
+import '../../../core/network/api_client.dart';
 import '../models/auth_response.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 
-class AuthController extends ChangeNotifier {
-  AuthController({AuthService? service})
-      : _service = service ?? MockAuthService();
+final tokenStorageProvider =
+    Provider<TokenStorage>((ref) => TokenStorage.shared);
+final authDioProvider = Provider<Dio>((ref) {
+  final dio = ApiClient.create(
+    tokenStorage: ref.watch(tokenStorageProvider),
+    baseUrl: AuthConfig.baseUrl,
+    onSessionExpired: () => ref.read(authControllerProvider.notifier).expire(),
+  );
+  ref.onDispose(() => dio.close());
+  return dio;
+});
+final authServiceProvider = Provider<AuthService>((ref) => ApiAuthService(
+    dio: ref.watch(authDioProvider), storage: ref.watch(tokenStorageProvider)));
+final authControllerProvider =
+    NotifierProvider<AuthController, AuthState>(AuthController.new);
 
-  final AuthService _service;
+class AuthState {
+  const AuthState(
+      {this.user,
+      this.isLoading = false,
+      this.isRestoring = false,
+      this.errorMessage});
+  final User? user;
+  final bool isLoading;
+  final bool isRestoring;
+  final String? errorMessage;
+}
 
-  bool _isLoading = false;
-  String? _errorMessage;
-  User? _currentUser;
-
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  User? get currentUser => _currentUser;
-
-  Future<AuthResponse> login(LoginRequest request) =>
-      _run(() => _service.login(request), saveUser: true);
-
-  Future<AuthResponse> register(RegisterRequest request) =>
-      _run(() => _service.register(request));
-
-  void clearError() {
-    if (_errorMessage == null) return;
-    _errorMessage = null;
-    notifyListeners();
+class AuthController extends Notifier<AuthState> {
+  @override
+  AuthState build() {
+    Future.microtask(restore);
+    return const AuthState(isRestoring: true);
   }
 
-  Future<AuthResponse> _run(
-    Future<AuthResponse> Function() action, {
-    bool saveUser = false,
-  }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    AuthResponse response;
+  Future<void> restore() async {
     try {
-      response = await action();
-    } catch (_) {
-      response = const AuthResponse.failure(AuthStrings.unknownError);
+      final user = await ref
+          .read(authServiceProvider)
+          .restore()
+          .timeout(const Duration(seconds: 20));
+      if (ref.mounted) state = AuthState(user: user);
+    } catch (error) {
+      if (ref.mounted) {
+        state = AuthState(
+            errorMessage: error is DioException
+                ? ApiAuthService.messageFor(error)
+                : 'Không thể khôi phục phiên. Vui lòng đăng nhập lại.');
+      }
     }
+  }
 
-    if (response.success) {
-      if (saveUser) _currentUser = response.user;
-    } else {
-      _errorMessage = response.message;
+  Future<AuthResponse> login(LoginRequest input, {bool remember = true}) =>
+      _run(() => ref.read(authServiceProvider).login(input, remember: remember),
+          signIn: true);
+  Future<AuthResponse> register(RegisterRequest input) =>
+      _run(() => ref.read(authServiceProvider).register(input));
+
+  Future<AuthResponse> _run(Future<AuthResponse> Function() action,
+      {bool signIn = false}) async {
+    if (state.isLoading || state.isRestoring) {
+      return const AuthResponse.failure('Yêu cầu đang được xử lý.');
     }
-    _isLoading = false;
-    notifyListeners();
-    return response;
+    state = AuthState(user: state.user, isLoading: true);
+    AuthResponse result;
+    try {
+      result = await action();
+    } catch (_) {
+      result = const AuthResponse.failure(
+          'Không thể xử lý lúc này. Vui lòng thử lại.');
+    }
+    if (ref.mounted) {
+      state = AuthState(
+          user: signIn && result.success ? result.user : state.user,
+          errorMessage: result.success ? null : result.message);
+    }
+    return result;
+  }
+
+  Future<void> logout() async {
+    if (state.isLoading) return;
+    state = AuthState(user: state.user, isLoading: true);
+    String? error;
+    try {
+      await ref.read(authServiceProvider).logout();
+    } catch (_) {
+      error =
+          'Không thể xác nhận đăng xuất hoàn toàn. Vui lòng kiểm tra kết nối.';
+    }
+    if (ref.mounted) state = AuthState(errorMessage: error);
+  }
+
+  void expire() {
+    if (ref.mounted) {
+      state = const AuthState(
+          errorMessage: 'Phiên đã hết hạn. Vui lòng đăng nhập lại.');
+    }
+  }
+
+  void clearError() {
+    state = AuthState(
+        user: state.user,
+        isLoading: state.isLoading,
+        isRestoring: state.isRestoring);
   }
 }

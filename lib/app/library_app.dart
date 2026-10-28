@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as legacy;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_router.dart';
 import 'providers/navigation_provider.dart';
 import 'theme/app_colors.dart';
 
-class LibraryApp extends StatelessWidget {
+class LibraryApp extends ConsumerWidget {
   const LibraryApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return legacy.ChangeNotifierProvider(
       create: (_) => NavigationProvider(),
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
@@ -20,7 +21,7 @@ class LibraryApp extends StatelessWidget {
           scaffoldBackgroundColor: AppColors.background,
           colorSchemeSeed: AppColors.primary,
         ),
-        routerConfig: appRouter,
+        routerConfig: ref.watch(appRouterProvider),
       ),
     );
   }

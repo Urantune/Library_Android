@@ -15,6 +15,7 @@ class AuthTextField extends StatefulWidget {
     this.onSubmitted,
     this.onChanged,
     this.enabled = true,
+    this.autofillHints,
   });
 
   final String label;
@@ -27,6 +28,7 @@ class AuthTextField extends StatefulWidget {
   final ValueChanged<String>? onSubmitted;
   final ValueChanged<String>? onChanged;
   final bool enabled;
+  final Iterable<String>? autofillHints;
 
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
@@ -59,6 +61,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
           controller: widget.controller,
           enabled: widget.enabled,
           obscureText: widget.isPassword && _obscure,
+          autofillHints: widget.autofillHints,
+          autocorrect: !widget.isPassword,
+          enableSuggestions: !widget.isPassword,
           keyboardType: widget.keyboardType,
           textInputAction: widget.textInputAction,
           onFieldSubmitted: widget.onSubmitted,

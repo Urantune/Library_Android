@@ -23,14 +23,14 @@ class PrimaryButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: AuthColors.primary,
-          disabledBackgroundColor: AuthColors.primary.withOpacity(0.7),
+          disabledBackgroundColor: AuthColors.primary.withValues(alpha: 0.7),
           foregroundColor: Colors.white,
           disabledForegroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
         ),
         child: isLoading
             ? const SizedBox(
