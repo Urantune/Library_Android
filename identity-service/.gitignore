@@ -1,4 +1,6 @@
 HELP.md
+data/auth-keys/
+*.pem
 target/
 .m2/
 data/*.db
