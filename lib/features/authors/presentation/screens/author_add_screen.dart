@@ -67,7 +67,7 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
     final now = DateTime.now();
 
     final author = Author(
-      id: widget.author?.id ?? 'author-${now.microsecondsSinceEpoch}',
+      id: widget.author?.id ?? '',
       name: _nameController.text.trim(),
       bio: _bioController.text.trim().isEmpty
           ? null
@@ -77,8 +77,8 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
           ? null
           : _countryController.text.trim(),
       status: _status,
-      createdAt: widget.author?.createdAt ?? now,
-      updatedAt: now,
+      createdAt: widget.author?.createdAt,
+      updatedAt: widget.author == null ? null : now,
     );
 
     try {

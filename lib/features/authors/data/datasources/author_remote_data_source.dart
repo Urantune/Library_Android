@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../models/author_response.dart';
 
@@ -20,5 +19,33 @@ final pageJson = (data['result'] ?? data['data'] ?? data) as Map<String, dynamic
       pageJson,
       (json) => AuthorResponse.fromJson(json),
     );
+  }
+
+  Future<void> createAuthor({
+    required String name,
+    String? bio,
+    DateTime? birthDate,
+    String? country,
+    required String status,
+  }) async {
+    await dio.post(
+      '$baseUrl/api/authors',
+      data: {
+        'name': name,
+        'bio': bio,
+        'birthDate': _formatDate(birthDate),
+        'country': country,
+        'status': status,
+      },
+    );
+  }
+
+  String? _formatDate(DateTime? date) {
+    if (date == null) return null;
+
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
   }
 }
