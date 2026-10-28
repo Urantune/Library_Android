@@ -9,18 +9,21 @@ class AuthorRepositoryImpl implements AuthorRepository {
 
   @override
   Future<List<Author>> getAuthors() async {
-    final page = await _remoteDataSource.fetchAuthors(page: 0, size: 1000); // fetch all for now
+    final page = await _remoteDataSource.fetchAuthors(
+        page: 0, size: 1000); // fetch all for now
     // Map AuthorResponse to Author (add id if available)
-    return page.content.map((e) => Author(
-      id: e.id, // fallback, update if BE returns id
-      name: e.name,
-      bio: e.bio,
-      birthDate: e.birthDate,
-      country: e.country,
-      status: e.status,
-      createdAt: e.createAt,
-      updatedAt: e.updateAt,
-    )).toList();
+    return page.content
+        .map((e) => Author(
+              id: e.id, // fallback, update if BE returns id
+              name: e.name,
+              bio: e.bio,
+              birthDate: e.birthDate,
+              country: e.country,
+              status: e.status,
+              createdAt: e.createAt,
+              updatedAt: e.updateAt,
+            ))
+        .toList();
   }
 
   @override
@@ -47,6 +50,6 @@ class AuthorRepositoryImpl implements AuthorRepository {
 
   @override
   Future<void> deleteAuthor(String id) async {
-    throw UnimplementedError('API does not support deleteAuthor yet');
+    await _remoteDataSource.deleteAuthor(id);
   }
 }

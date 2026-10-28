@@ -27,7 +27,8 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.author?.name ?? '');
-    _countryController = TextEditingController(text: widget.author?.country ?? '');
+    _countryController =
+        TextEditingController(text: widget.author?.country ?? '');
     _bioController = TextEditingController(text: widget.author?.bio ?? '');
     _birthDate = widget.author?.birthDate;
     _status = widget.author?.status ?? 'ACTIVE';
@@ -147,7 +148,6 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
                 },
               ),
               const SizedBox(height: 18),
-
               _buildLabel('Ngày sinh'),
               InkWell(
                 onTap: _selectBirthDate,
@@ -184,7 +184,6 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-
               _buildLabel('Quốc gia'),
               TextFormField(
                 controller: _countryController,
@@ -195,7 +194,6 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-
               _buildLabel('Tiểu sử'),
               TextFormField(
                 controller: _bioController,
@@ -206,7 +204,6 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-
               _buildLabel('Trạng thái'),
               DropdownButtonFormField<String>(
                 value: _status,
@@ -231,7 +228,6 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
                 },
               ),
               const SizedBox(height: 28),
-
               SizedBox(
                 height: 50,
                 child: FilledButton.icon(
@@ -247,7 +243,9 @@ class _AuthorAddScreenState extends ConsumerState<AuthorAddScreen> {
                         )
                       : const Icon(Icons.save_outlined),
                   label: Text(
-                    _isSaving ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Lưu tác giả'),
+                    _isSaving
+                        ? 'Đang lưu...'
+                        : (isEditing ? 'Cập nhật' : 'Lưu tác giả'),
                   ),
                 ),
               ),

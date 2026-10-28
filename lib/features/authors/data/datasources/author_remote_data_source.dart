@@ -8,13 +8,15 @@ class AuthorRemoteDataSource {
   AuthorRemoteDataSource({Dio? dio, this.baseUrl = 'http://localhost:8082'})
       : dio = dio ?? Dio();
 
-  Future<PageDTO<AuthorResponse>> fetchAuthors({int page = 0, int size = 20}) async {
+  Future<PageDTO<AuthorResponse>> fetchAuthors(
+      {int page = 0, int size = 20}) async {
     final response = await dio.get('$baseUrl/api/authors', queryParameters: {
       'page': page,
       'size': size,
     });
     final data = response.data;
-final pageJson = (data['result'] ?? data['data'] ?? data) as Map<String, dynamic>;
+    final pageJson =
+        (data['result'] ?? data['data'] ?? data) as Map<String, dynamic>;
     return PageDTO<AuthorResponse>.fromJson(
       pageJson,
       (json) => AuthorResponse.fromJson(json),
@@ -37,6 +39,12 @@ final pageJson = (data['result'] ?? data['data'] ?? data) as Map<String, dynamic
         'country': country,
         'status': status,
       },
+    );
+  }
+
+  Future<void> deleteAuthor(String id) async {
+    await dio.delete(
+      '$baseUrl/api/authors/${Uri.encodeComponent(id)}',
     );
   }
 
