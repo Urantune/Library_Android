@@ -1,5 +1,6 @@
 package catalogservice.controller;
 
+import catalogservice.dto.request.CreateAuthorRequest;
 import catalogservice.dto.response.AuthorResponse;
 import catalogservice.dto.response.PageDTO;
 import catalogservice.dto.response.ResponseAPI;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -21,6 +23,17 @@ import java.time.temporal.ChronoUnit;
 public class AuthorController {
     IAuthorService authorService;
     String timestamp() {return Instant.now().truncatedTo(ChronoUnit.SECONDS).toString();}
+
+    @PostMapping
+    public ResponseEntity<ResponseAPI<AuthorResponse>> createAuthor(@RequestBody CreateAuthorRequest request) {
+        ResponseAPI<AuthorResponse> response =
+                ResponseAPI.<AuthorResponse>builder()
+                        .message("Author created successfully.")
+                        .result(authorService.createAuthor(request))
+                        .timestamp(timestamp())
+                        .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
     @GetMapping
     public ResponseEntity<ResponseAPI<PageDTO<AuthorResponse>>> getAuthors(
@@ -44,10 +57,20 @@ public class AuthorController {
     public ResponseEntity<ResponseAPI<AuthorResponse>> getAuthorById(@PathVariable String id) {
         ResponseAPI<AuthorResponse> response =
                 ResponseAPI.<AuthorResponse>builder()
-                        .message("Department retrieved successfully")
+                        .message("Author retrieved successfully")
                         .result(authorService.getAuthorById(id))
                         .timestamp(timestamp())
                         .build();
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ResponseAPI<Void>> deleteCar(@PathVariable String id){
+        authorService.deleteAuthor(id);
+        ResponseAPI<Void> response = ResponseAPI.<Void>builder()
+                .message("Author deleted successfully.")
+                .timestamp(timestamp())
+                .build();
+        return ResponseEntity.ok(response);
     }
 }

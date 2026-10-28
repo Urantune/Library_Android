@@ -1,5 +1,6 @@
 package catalogservice.service.Impl;
 
+import catalogservice.dto.request.CreateAuthorRequest;
 import catalogservice.dto.response.AuthorResponse;
 import catalogservice.dto.response.PageDTO;
 import catalogservice.dto.response.ResponseAPI;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -66,4 +68,20 @@ public class AuthorService implements IAuthorService {
         return authorMapper.toAuthor(author);
     }
 
+    @Override
+    public AuthorResponse createAuthor(CreateAuthorRequest request) {
+        if (authorRepository.existsByName(request.getName())) {
+            throw new AppException(ErrorCode.AUTHOR_EXISTED);
+        }
+        Author author = authorMapper.createAuthor(request);
+        author.setId("AUT" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        author = authorRepository.save(author);
+        return authorMapper.toAuthor(author);
+    }
+
+    @Override
+    public void deleteAuthor(String id) {
+        Author author = authorRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+        authorRepository.delete(author);
+    }
 }

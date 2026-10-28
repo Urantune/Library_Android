@@ -9,6 +9,7 @@ public enum ErrorCode {
     UNCATEGORIZED_EXCEPTION(9999, "Uncategorized Exception", HttpStatus.INTERNAL_SERVER_ERROR),
     UNAUTHORIZED(1001, "Unauthorized", HttpStatus.UNAUTHORIZED),
     NOT_FOUND(1002, "Author not found", HttpStatus.NOT_FOUND),
+    AUTHOR_EXISTED(1003,"Author existed",HttpStatus.BAD_REQUEST),
     INVALID_KEY(1002, "Invalid Key", HttpStatus.UNAUTHORIZED);
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

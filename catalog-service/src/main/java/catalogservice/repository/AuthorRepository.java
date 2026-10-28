@@ -20,4 +20,6 @@ public interface AuthorRepository extends JpaRepository<Author, String> {
             @Param("status") String status,
             Pageable pageable
     );
+
+    boolean existsByName(String name);
 }
