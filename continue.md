@@ -20,9 +20,10 @@ Chống spam: login 30/IP/phút, register 5/IP/giờ, 5 lần sai/account/5 phú
 Kiểm chứng backend: 9 Maven tests passed trên SQLite thật. Live test Flutter Dio -> Java đang chạy -> SQLite riêng cũng passed toàn bộ register/login/restore/refresh/logout và token cũ 401.
 Android: đã thay MockAuthService bằng ApiAuthService, shared Riverpod session, route guard, nhớ phiên secure storage hoặc memory, single-flight refresh; UI responsive đã kiểm tra mobile/desktop. Auth base URL direct Identity 8081, cấu hình bằng AUTH_BASE_URL; Android emulator mặc định 10.0.2.2, desktop/web 127.0.0.1.
 Chạy backend: powershell -ExecutionPolicy Bypass -File ./run-auth.ps1 từ SERVER_ROOT; dữ liệu mặc định identity-service/data/identity.db, RSA keys data/auth-keys không commit. Android debug emulator AUTH_BASE_URL=http://10.0.2.2:8081; máy thật dùng LAN IP.
+Gateway: đã tạo api-gateway ở commit 1b84d4d trên nhánh Server, cổng 8080, Eureka/LoadBalancer routes cho Identity, Catalog, Circulation, Reservation, Notification. Catalog hiện còn tắt Eureka trong application.properties nên route Catalog cần bật client khi tích hợp service.
 Chưa làm: quyền/revocation của toàn bộ domain services/Gateway, các module ngoài Khang; không coi giới hạn request này là chống DDoS tuyệt đối.
 Kiểm chứng Android: toàn bộ 81 tests passed, 1 live test skip mặc định; live test đã chạy riêng và passed với Spring Boot thật. Analyze các file auth/integration không có lỗi. APK đang chờ Gradle, chưa xác nhận build thành công.
-Commit: Android 7225931 BEta sign; Server a7d7c90 triển khai Identity, bàn giao cập nhật trong commit BEta sign. Backend local đang phục vụ cổng 8081, dữ liệu thật data/identity.db.
+Commit: Android 7225931 BEta sign; Server a7d7c90 Identity, 1b84d4d API Gateway. Backend local Identity dùng cổng 8081, dữ liệu data/identity.db.
 Bước tiếp: hoàn tất build APK và chạy thử trên emulator/thiết bị. Giữ nguyên sáu block khác; chỉ mở rộng phần của Khang theo code thực tế và yêu cầu trực tiếp.
 ===== HET NGUOI 1 =====
 
