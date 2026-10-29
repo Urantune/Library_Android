@@ -60,6 +60,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>customer.apigateway.ApiGatewayApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>
