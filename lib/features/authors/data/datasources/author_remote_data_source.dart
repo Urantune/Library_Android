@@ -48,6 +48,26 @@ class AuthorRemoteDataSource {
     );
   }
 
+  Future<void> updateAuthor({
+    required String id,
+    required String name,
+    String? bio,
+    DateTime? birthDate,
+    String? country,
+    required String status,
+  }) async {
+    await dio.put(
+      '$baseUrl/api/authors/${Uri.encodeComponent(id)}',
+      data: {
+        'name': name,
+        'bio': bio,
+        'birthDate': _formatDate(birthDate),
+        'country': country,
+        'status': status,
+      },
+    );
+  }
+
   String? _formatDate(DateTime? date) {
     if (date == null) return null;
 

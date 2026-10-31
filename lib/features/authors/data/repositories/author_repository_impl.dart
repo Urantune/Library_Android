@@ -45,7 +45,14 @@ class AuthorRepositoryImpl implements AuthorRepository {
 
   @override
   Future<void> updateAuthor(Author author) async {
-    throw UnimplementedError('API does not support updateAuthor yet');
+    await _remoteDataSource.updateAuthor(
+      id: author.id,
+      name: author.name,
+      bio: author.bio,
+      birthDate: author.birthDate,
+      country: author.country,
+      status: author.status,
+    );
   }
 
   @override
