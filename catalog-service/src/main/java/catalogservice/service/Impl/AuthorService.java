@@ -1,6 +1,7 @@
 package catalogservice.service.Impl;
 
 import catalogservice.dto.request.CreateAuthorRequest;
+import catalogservice.dto.request.UpdateAuthor;
 import catalogservice.dto.response.AuthorResponse;
 import catalogservice.dto.response.PageDTO;
 import catalogservice.dto.response.ResponseAPI;
@@ -77,6 +78,14 @@ public class AuthorService implements IAuthorService {
         author.setId("AUT" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
         author = authorRepository.save(author);
         return authorMapper.toAuthor(author);
+    }
+
+    @Override
+    public AuthorResponse updateAuthor(String id, UpdateAuthor request) {
+        Author author = authorRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+        authorMapper.updateAuthor(request, author);
+        Author updateAuthor = authorRepository.save(author);
+        return authorMapper.toAuthor(updateAuthor);
     }
 
     @Override

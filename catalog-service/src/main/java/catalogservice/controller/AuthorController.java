@@ -1,6 +1,7 @@
 package catalogservice.controller;
 
 import catalogservice.dto.request.CreateAuthorRequest;
+import catalogservice.dto.request.UpdateAuthor;
 import catalogservice.dto.response.AuthorResponse;
 import catalogservice.dto.response.PageDTO;
 import catalogservice.dto.response.ResponseAPI;
@@ -15,13 +16,27 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE,makeFinal = true)
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
 @RequestMapping("/api/authors")
 @RestController
 public class AuthorController {
     IAuthorService authorService;
-    String timestamp() {return Instant.now().truncatedTo(ChronoUnit.SECONDS).toString();}
+
+    String timestamp() {
+        return Instant.now().truncatedTo(ChronoUnit.SECONDS).toString();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ResponseAPI<AuthorResponse>> updateAuthorById(@PathVariable String id, @RequestBody UpdateAuthor request) {
+        ResponseAPI<AuthorResponse> response =
+                ResponseAPI.<AuthorResponse>builder()
+                        .message("Author update successfully")
+                        .result(authorService.updateAuthor(id, request))
+                        .timestamp(timestamp())
+                        .build();
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
 
     @PostMapping
     public ResponseEntity<ResponseAPI<AuthorResponse>> createAuthor(@RequestBody CreateAuthorRequest request) {
@@ -64,7 +79,7 @@ public class AuthorController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ResponseAPI<Void>> deleteCar(@PathVariable String id){
+    public ResponseEntity<ResponseAPI<Void>> deleteAuthor(@PathVariable String id) {
         authorService.deleteAuthor(id);
         ResponseAPI<Void> response = ResponseAPI.<Void>builder()
                 .message("Author deleted successfully.")
