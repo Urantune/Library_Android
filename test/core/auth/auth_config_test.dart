@@ -9,9 +9,9 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     expect(AuthConfig.baseUrl,
-        configured.isEmpty ? 'http://127.0.0.1:8081' : configured);
+        configured.isEmpty ? 'http://127.0.0.1:8080' : configured);
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     expect(AuthConfig.baseUrl,
-        configured.isEmpty ? 'http://10.0.2.2:8081' : configured);
+        configured.isEmpty ? 'http://10.0.2.2:8080' : configured);
   });
 }
