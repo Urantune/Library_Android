@@ -3,11 +3,13 @@ package catalogservice.entity;
 import catalogservice.enums.BookStatus;
 import catalogservice.persistence.BookTimestamps;
 import jakarta.persistence.*;
+import catalogservice.Categories.entity.Category;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 
 @Entity
 @Table(name = "books", uniqueConstraints = @UniqueConstraint(name = "uk_books_isbn", columnNames = "isbn"))
