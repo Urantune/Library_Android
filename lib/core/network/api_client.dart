@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../auth/auth_session.dart';
 import '../auth/token_storage.dart';
 import '../config/auth_config.dart';
+import '../config/api_config.dart';
 import 'auth_interceptor.dart';
 
 class ApiClient {
@@ -10,9 +11,7 @@ class ApiClient {
       String? baseUrl,
       void Function()? onSessionExpired}) {
     final options = BaseOptions(
-      baseUrl: baseUrl ??
-          const String.fromEnvironment('API_BASE_URL',
-              defaultValue: 'http://10.0.2.2:8080'),
+      baseUrl: baseUrl ?? ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 15),
       sendTimeout: const Duration(seconds: 10),
@@ -36,6 +35,7 @@ class ApiClient {
 
   static final Dio dio = create();
   static final Dio catalogDio = create(
-      baseUrl: const String.fromEnvironment('CATALOG_API_URL',
-          defaultValue: 'http://10.0.2.2:8082'));
+      baseUrl: const String.fromEnvironment('CATALOG_API_URL').isEmpty
+          ? ApiConfig.baseUrl
+          : const String.fromEnvironment('CATALOG_API_URL'));
 }
