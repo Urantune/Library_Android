@@ -11,20 +11,16 @@ Contract hướng dẫn hiện tại: LM-1.1.1.
 Khởi tạo file này không có nghĩa tính năng của bất kỳ thành viên nào đã hoàn thành. Các phần chưa có bàn giao phải kiểm tra source thực tế.
 
 ===== NGUOI 1 - Dương Phúc Khang =====
-Cập nhật 2026-10-28; backlog mới Backlog_PRM_MSS_Group3.xlsm ở workspace root đã chuyển PRM-006/007/008 cho Khang.
-Đã giữ phần Book trước: CRUD SQLite, phân trang, mapper quan hệ null theo yêu cầu; không sửa module người khác trong đợt auth này.
-Phạm vi mới: PRM-003/006/007/008 và backend Identity hỗ trợ end-to-end theo yêu cầu trực tiếp. Reuse features/sign, core/auth/network; không tạo feature auth trùng.
-Backend: identity-service Java 21/Spring Boot 4.1.1, SQLite users/roles/refresh_tokens + migration auth_sessions/auth_throttle. JdbcTemplate bind parameters, BCrypt 12, RSA JWT, refresh SHA256 + rotation/reuse detection; logout revoke session và access trong Identity.
-API: POST /api/auth/register,login,refresh,logout; GET /api/users/me. Register trả user 201/MEMBER, sau đó login. Session response accessToken/refreshToken/expiresIn/user.
-Chống spam: login 30/IP/phút, register 5/IP/giờ, 5 lần sai/account/5 phút, refresh/logout 60/IP/phút; request body 8KiB; Retry-After 429; không tin X-Forwarded-For tùy ý. Exception không trả stacktrace/token/password.
-Kiểm chứng backend: 9 Maven tests passed trên SQLite thật. Live test Flutter Dio -> Java đang chạy -> SQLite riêng cũng passed toàn bộ register/login/restore/refresh/logout và token cũ 401.
-Android: đã thay MockAuthService bằng ApiAuthService, shared Riverpod session, route guard, nhớ phiên secure storage hoặc memory, single-flight refresh; UI responsive đã kiểm tra mobile/desktop. Auth base URL direct Identity 8081, cấu hình bằng AUTH_BASE_URL; Android emulator mặc định 10.0.2.2, desktop/web 127.0.0.1.
-Chạy backend: powershell -ExecutionPolicy Bypass -File ./run-auth.ps1 từ SERVER_ROOT; dữ liệu mặc định identity-service/data/identity.db, RSA keys data/auth-keys không commit. Android debug emulator AUTH_BASE_URL=http://10.0.2.2:8081; máy thật dùng LAN IP.
-Gateway: đã tạo api-gateway ở commit 1b84d4d trên nhánh Server, cổng 8080, Eureka/LoadBalancer routes cho Identity, Catalog, Circulation, Reservation, Notification. Catalog hiện còn tắt Eureka trong application.properties nên route Catalog cần bật client khi tích hợp service.
-Chưa làm: quyền/revocation của toàn bộ domain services/Gateway, các module ngoài Khang; không coi giới hạn request này là chống DDoS tuyệt đối.
-Kiểm chứng Android: toàn bộ 81 tests passed, 1 live test skip mặc định; live test đã chạy riêng và passed với Spring Boot thật. Analyze các file auth/integration không có lỗi. APK đang chờ Gradle, chưa xác nhận build thành công.
-Commit: Android 7225931 BEta sign; Server a7d7c90 Identity, 1b84d4d API Gateway. Backend local Identity dùng cổng 8081, dữ liệu data/identity.db.
-Bước tiếp: hoàn tất build APK và chạy thử trên emulator/thiết bị. Giữ nguyên sáu block khác; chỉ mở rộng phần của Khang theo code thực tế và yêu cầu trực tiếp.
+Cập nhật 2026-11-01. Server f3fd74d, Android 8063704 đã pull; chưa commit/push các thay đổi hôm nay theo yêu cầu.
+Phạm vi Khang: Book và đăng ký/đăng nhập/đăng xuất; Identity Java 21/Spring Boot, SQLite, BCrypt, RSA JWT, refresh rotation và throttling giữ nguyên.
+Luồng mặc định mới: Flutter Windows/Android -> API Gateway 8080 -> Eureka 8761 -> Identity 8081 hoặc Catalog 8082. Gateway định tuyến, các service chạy thành tiến trình riêng.
+Android: thêm core/config/api_config.dart để mặc định Windows dùng 127.0.0.1:8080, emulator dùng 10.0.2.2:8080. AuthConfig và ApiClient.catalogDio dùng Gateway; vẫn hỗ trợ API_BASE_URL/AUTH_BASE_URL/CATALOG_API_URL.
+Server: Catalog bật Eureka; CatalogServiceApplication dùng ApplicationHome để tìm đúng data/catalog.db cả khi chạy executable jar. Đã xác nhận jar tự tìm đúng database mà không cần DB_PATH.
+Kiểm chứng hôm nay: build 4 service thành công với JDK 21; Flutter Windows debug build thành công; analyze file thay đổi không lỗi; 11/11 Flutter tests pass gồm live register/login/restore/refresh/logout qua Gateway, live BookRemoteDataSource list/detail qua Gateway và UI auth/book tests. Gateway trả HTTP 200, 5 sách SQLite. Live book test gọi remote trực tiếp để không bị cơ chế fallback JSON che lỗi API.
+Chạy thử hôm nay theo yêu cầu: ngầm, không GUI; không xác nhận thao tác tay trên cửa sổ Windows. Các lần sau chạy bình thường bằng flutter run -d windows.
+Service đang chạy ngầm: Discovery PID 3448, Identity PID 5156, Gateway PID 4600, Catalog PID 2652. Log trong target/live-run.log và target/live-error.log của mỗi service. Cổng có thể thay đổi trạng thái khi tiến trình dừng; kiểm tra trước khi chạy lại.
+Lưu ý local: renting-sevice/pom.xml là thay đổi có sẵn trước pull, đã bảo toàn. identity-service/data/identity.db đổi do tạo tài khoản live test auth-check-...@example.com. Không reset database. BookRepository còn fallback JSON khi DioException; không suy từ việc UI có sách rằng API luôn hoạt động.
+Giới hạn: chưa kiểm chứng nghiệp vụ của thành viên khác, chưa bảo đảm revocation/quyền trên toàn bộ domain services. Chỉ commit/push khi người dùng yêu cầu.
 ===== HET NGUOI 1 =====
 
 ===== NGUOI 2 - Đỗ Trọng Trí =====
