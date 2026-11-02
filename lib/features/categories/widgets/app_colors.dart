@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Bảng màu dùng chung (trước đây bị khai báo lặp ở nhiều file).
 class AppColors {
   AppColors._();
 

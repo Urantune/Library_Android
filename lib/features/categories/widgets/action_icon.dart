@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Nút icon nhỏ ở cột "Thao tác".
 class ActionIcon extends StatelessWidget {
   final IconData icon;
   final String tooltip;

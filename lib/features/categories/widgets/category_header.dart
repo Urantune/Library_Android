@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Tiêu đề: nút quay lại, "Thể loại", nút làm mới.
 class CategoryHeader extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onRefresh;
