@@ -3,205 +3,100 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../models/publisher.dart';
 
+// PRM-023: GET LIST / DETAIL PUBLISHER
+// =====================================================
+
 class PublisherService {
-  // Sử dụng Dio chung của project.
-  // Client này đã tích hợp AuthInterceptor và TokenStorage.
-  final Dio _dio;
+  // Sử dụng Dio được cấu hình sẵn trong project.
+  // catalogDio dùng để giao tiếp với Catalog Service.
+  // Không tạo một Dio mới vì project đã có ApiClient quản lý cấu hình kết nối Backend.
+  final Dio dio = ApiClient.catalogDio;
 
-  PublisherService({Dio? dio}) : _dio = dio ?? ApiClient.catalogDio;
+  // ===================================================
+  // METHOD 1: GET DANH SÁCH NHÀ XUẤT BẢN
+  // API: GET /api/publishers
+  // ===================================================
 
-  // =========================================================
-  // XỬ LÝ RESPONSE
-  // =========================================================
+  Future<List<Publisher>> getPublishers() async {
+    // Gửi GET Request đến Backend.
+    // await: Chờ Backend phản hồi dữ liệu.
+    // response: Chứa dữ liệu mà Backend trả về.
+    final response = await dio.get('/api/publishers');
 
-  // Hỗ trợ các dạng response:
-  // 1. { "data": {...} }
-  // 2. { "result": {...} }
-  // 3. { "data": { "items": [...] } }
-  // 4. { "result": { "content": [...] } }
-  // 5. JSON trực tiếp.
+    // Lấy dữ liệu JSON từ Response.
+    dynamic data = response.data;
 
-  dynamic _unwrap(dynamic value) {
-    var current = value;
-
-    for (int i = 0; i < 5; i++) {
-      if (current is! Map) break;
-
-      if (current['data'] != null) {
-        current = current['data'];
-      } else if (current['result'] != null) {
-        current = current['result'];
-      } else if (current['publisher'] != null) {
-        current = current['publisher'];
-      } else {
-        break;
-      }
+    // Backend của project sử dụng ResponseAPI có trường result chứa dữ liệu thực tế.
+    if (data is Map && data['result'] != null) {
+      data = data['result'];
     }
 
-    return current;
-  }
-
-  List<Publisher> _parsePublisherList(dynamic response) {
-    final data = _unwrap(response);
-
-    dynamic items;
-
-    if (data is List) {
-      items = data;
-    } else if (data is Map) {
-      items = data['items'] ?? data['content'] ?? data['publishers'];
+    // Một số API có thể bọc dữ liệu bên trong trường data.
+    if (data is Map && data['data'] != null) {
+      data = data['data'];
     }
 
-    if (items is! List) {
-      throw const FormatException(
-        'Response danh sách nhà xuất bản không hợp lệ.',
-      );
+    // Xử lý trường hợp Backend trả dữ liệu phân trang.
+    //
+    // content: Danh sách dữ liệu phân trang.
+    // items: Một dạng danh sách khác.
+    // publishers: Danh sách nhà xuất bản.
+    if (data is Map) {
+      data = data['content'] ?? data['items'] ?? data['publishers'];
     }
 
-    return items.map((item) {
-      if (item is! Map) {
-        throw const FormatException(
-          'Thông tin nhà xuất bản không hợp lệ.',
-        );
-      }
+    // Kiểm tra dữ liệu sau khi xử lý có phải List không.
+    // Nếu không phải List thì dữ liệu không đúng định dạng.
+    if (data is! List) {
+      throw Exception('Dữ liệu danh sách không hợp lệ');
+    }
 
+    // Chuyển từng phần tử JSON thành Publisher Object.
+    //
+    // data.map(): Duyệt qua từng phần tử trong danh sách.
+    // Publisher.fromJson(): Chuyển JSON thành Publisher.
+    // toList(): Chuyển kết quả thành List<Publisher>.
+    return data.map((item) {
       return Publisher.fromJson(
         Map<String, dynamic>.from(item),
       );
     }).toList();
   }
 
-  Publisher _parsePublisher(dynamic response) {
-    final data = _unwrap(response);
+  // ===================================================
+  // METHOD 2: GET CHI TIẾT NHÀ XUẤT BẢN
+  // API: GET /api/publishers/{id}
+  // ===================================================
 
-    if (data is! Map) {
-      throw const FormatException(
-        'Response chi tiết nhà xuất bản không hợp lệ.',
-      );
+  Future<Publisher> getPublisherById(int id) async {
+    // Gửi GET Request đến API chi tiết.
+    //
+    // Ví dụ id = 1:
+    // GET /api/publishers/1
+    final response = await dio.get('/api/publishers/$id');
+
+    // Lấy dữ liệu JSON từ Backend.
+    dynamic data = response.data;
+
+    // Lấy dữ liệu bên trong trường result nếu Backend sử dụng ResponseAPI.
+    if (data is Map && data['result'] != null) {
+      data = data['result'];
     }
 
+    // Xử lý trường hợp dữ liệu được bọc trong data.
+    if (data is Map && data['data'] != null) {
+      data = data['data'];
+    }
+
+    // Kiểm tra dữ liệu có đúng kiểu Map không.
+    // Vì chi tiết một nhà xuất bản là một Object, không phải một danh sách List.
+    if (data is! Map) {
+      throw Exception('Dữ liệu nhà xuất bản không hợp lệ');
+    }
+
+    // Chuyển JSON thành đối tượng Publisher.
     return Publisher.fromJson(
       Map<String, dynamic>.from(data),
     );
-  }
-
-  // =========================================================
-  // XỬ LÝ LỖI
-  // =========================================================
-
-  String _errorMessage(DioException error) {
-    final responseData = error.response?.data;
-
-    if (responseData is Map) {
-      final message = responseData['message'] ??
-          responseData['error'] ??
-          responseData['detail'];
-
-      if (message != null) {
-        return message.toString();
-      }
-    }
-
-    switch (error.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.receiveTimeout:
-      case DioExceptionType.sendTimeout:
-        return 'Kết nối đến máy chủ quá thời gian.';
-
-      case DioExceptionType.connectionError:
-        return 'Không thể kết nối Backend. Kiểm tra máy chủ và mạng.';
-
-      default:
-        return error.message ?? 'Đã xảy ra lỗi khi xử lý nhà xuất bản.';
-    }
-  }
-
-  // =========================================================
-  // GET: DANH SÁCH NHÀ XUẤT BẢN
-  // =========================================================
-
-  Future<List<Publisher>> getPublishers() async {
-    try {
-      final response = await _dio.get(
-        '/api/publishers',
-        queryParameters: {
-          'page': 0,
-          'size': 100,
-        },
-      );
-
-      return _parsePublisherList(response.data);
-    } on DioException catch (error) {
-      throw Exception(_errorMessage(error));
-    }
-  }
-
-  // =========================================================
-  // GET: CHI TIẾT NHÀ XUẤT BẢN
-  // =========================================================
-
-  Future<Publisher> getPublisherById(int id) async {
-    try {
-      final response = await _dio.get(
-        '/api/publishers/$id',
-      );
-
-      return _parsePublisher(response.data);
-    } on DioException catch (error) {
-      throw Exception(_errorMessage(error));
-    }
-  }
-
-  // =========================================================
-  // POST: THÊM NHÀ XUẤT BẢN
-  // =========================================================
-
-  Future<Publisher> createPublisher(
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final response = await _dio.post(
-        '/api/publishers',
-        data: data,
-      );
-
-      return _parsePublisher(response.data);
-    } on DioException catch (error) {
-      throw Exception(_errorMessage(error));
-    }
-  }
-
-  // =========================================================
-  // PUT: CẬP NHẬT NHÀ XUẤT BẢN
-  // =========================================================
-
-  Future<Publisher> updatePublisher(
-    int id,
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final response = await _dio.put(
-        '/api/publishers/$id',
-        data: data,
-      );
-
-      return _parsePublisher(response.data);
-    } on DioException catch (error) {
-      throw Exception(_errorMessage(error));
-    }
-  }
-
-  // =========================================================
-  // DELETE: XÓA NHÀ XUẤT BẢN
-  // =========================================================
-
-  Future<void> deletePublisher(int id) async {
-    try {
-      await _dio.delete(
-        '/api/publishers/$id',
-      );
-    } on DioException catch (error) {
-      throw Exception(_errorMessage(error));
-    }
   }
 }
