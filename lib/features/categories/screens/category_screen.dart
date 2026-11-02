@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../models/book_category.dart';
 import '../providers/category_provider.dart';
-import '../services/category_storage_service.dart';
+import '../services/category_api_service.dart';
 import '../widgets/app_colors.dart';
+import '../widgets/category_detail_dialog.dart';
 import '../widgets/category_form_dialog.dart';
 import '../widgets/category_header.dart';
 import '../widgets/category_pagination.dart';
@@ -12,11 +13,7 @@ import '../widgets/category_table.dart';
 import '../widgets/category_toolbar.dart';
 import '../widgets/delete_confirm_dialog.dart';
 
-// ───────────────────────── Màn hình Thể loại ─────────────────────────
-/// Tự tạo [CategoryProvider] bên trong nên chỉ cần dùng `CategoryScreen()`
-/// ở chỗ trước đây dùng `CategoryPage()`.
 class CategoryScreen extends StatelessWidget {
-  /// Gọi khi bấm nút quay lại. Nếu null thì dùng Navigator.maybePop.
   final VoidCallback? onBack;
 
   const CategoryScreen({super.key, this.onBack});
@@ -24,7 +21,7 @@ class CategoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => CategoryProvider(CategoryStorageService())..load(),
+      create: (_) => CategoryProvider(CategoryApiService())..load(),
       child: _CategoryView(onBack: onBack),
     );
   }
@@ -34,23 +31,44 @@ class _CategoryView extends StatelessWidget {
   final VoidCallback? onBack;
   const _CategoryView({this.onBack});
 
-  // ── C: thêm ──
+  Future<ParentOptions?> _loadParents(
+    CategoryProvider provider,
+    ScaffoldMessengerState messenger, {
+    String? excludeId,
+  }) async {
+    try {
+      return await provider.loadParentOptions(excludeId: excludeId);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Không tải được danh sách danh mục cha: $e')),
+      );
+      return null;
+    }
+  }
+
   Future<void> _onCreate(BuildContext context) async {
     final provider = context.read<CategoryProvider>();
     final messenger = ScaffoldMessenger.of(context);
+
+    final parents = await _loadParents(provider, messenger);
+    if (parents == null || !context.mounted) return;
 
     final result = await showDialog<CategoryFormResult>(
       context: context,
       builder: (_) => CategoryFormDialog(
         title: 'Thêm thể loại',
         submitLabel: 'Thêm',
-        takenNames: provider.takenNames(),
+        parentOptions: parents.roots,
       ),
     );
     if (result == null) return;
 
     try {
-      await provider.add(result.name, result.description);
+      await provider.add(
+        result.name,
+        result.description,
+        parentId: result.parentId,
+      );
       messenger.showSnackBar(
         SnackBar(content: Text('Đã thêm thể loại "${result.name}"')),
       );
@@ -61,7 +79,6 @@ class _CategoryView extends StatelessWidget {
     }
   }
 
-  // ── U: sửa ──
   Future<void> _onEdit(BuildContext context, BookCategory category) async {
     final provider = context.read<CategoryProvider>();
     final messenger = ScaffoldMessenger.of(context);
@@ -75,6 +92,13 @@ class _CategoryView extends StatelessWidget {
       return;
     }
 
+    final parents = await _loadParents(
+      provider,
+      messenger,
+      excludeId: current.id,
+    );
+    if (parents == null || !context.mounted) return;
+
     final result = await showDialog<CategoryFormResult>(
       context: context,
       builder: (_) => CategoryFormDialog(
@@ -82,8 +106,9 @@ class _CategoryView extends StatelessWidget {
         submitLabel: 'Lưu',
         initialName: current.name,
         initialDescription: current.description,
-        // Chặn trùng với các thể loại khác (không tính chính nó)
-        takenNames: provider.takenNames(excludeId: current.id),
+        parentOptions: parents.roots,
+        parentLocked: parents.locked,
+        initialParentId: current.parentId,
       ),
     );
     if (result == null) return;
@@ -93,6 +118,7 @@ class _CategoryView extends StatelessWidget {
         current.id,
         result.name,
         result.description,
+        parentId: result.parentId,
       );
       switch (status) {
         case UpdateResult.updated:
@@ -114,7 +140,17 @@ class _CategoryView extends StatelessWidget {
     }
   }
 
-  // ── D: xóa ──
+  Future<void> _onDetail(BuildContext context, BookCategory category) {
+    final provider = context.read<CategoryProvider>();
+    return showDialog<void>(
+      context: context,
+      builder: (_) => CategoryDetailDialog(
+        category: category,
+        loadParentName: () => provider.parentNameOf(category.parentId),
+      ),
+    );
+  }
+
   Future<void> _onDelete(BuildContext context, BookCategory category) async {
     final provider = context.read<CategoryProvider>();
     final messenger = ScaffoldMessenger.of(context);
@@ -169,6 +205,7 @@ class _CategoryView extends StatelessWidget {
           : 'Không tìm thấy thể loại phù hợp',
       onEdit: (c) => _onEdit(context, c),
       onDelete: (c) => _onDelete(context, c),
+      onDetail: (c) => _onDetail(context, c),
     );
   }
 

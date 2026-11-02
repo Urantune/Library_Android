@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../models/book_category.dart';
 import 'app_colors.dart';
 
-/// Dữ liệu trả về từ form.
 class CategoryFormResult {
   final String name;
   final String description;
-  const CategoryFormResult(this.name, this.description);
+
+  final String? parentId;
+  const CategoryFormResult(this.name, this.description, {this.parentId});
 }
 
-/// Form dùng chung cho cả thêm và sửa thể loại.
 class CategoryFormDialog extends StatefulWidget {
   final String title;
   final String submitLabel;
   final String initialName;
   final String initialDescription;
 
-  /// Các tên đã tồn tại, dùng để chặn trùng tên.
+  final List<BookCategory> parentOptions;
+
+  final String? initialParentId;
+
+  final bool parentLocked;
+
   final List<String> takenNames;
 
   const CategoryFormDialog({
@@ -25,6 +31,9 @@ class CategoryFormDialog extends StatefulWidget {
     required this.submitLabel,
     this.initialName = '',
     this.initialDescription = '',
+    this.parentOptions = const [],
+    this.initialParentId,
+    this.parentLocked = false,
     this.takenNames = const [],
   });
 
@@ -39,6 +48,8 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
   late final TextEditingController _descController =
       TextEditingController(text: widget.initialDescription);
 
+  late String? _parentId = widget.initialParentId;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -51,6 +62,7 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     Navigator.of(context).pop(CategoryFormResult(
       _nameController.text.trim(),
       _descController.text.trim(),
+      parentId: _parentId,
     ));
   }
 
@@ -67,6 +79,42 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
       focusedBorder: border(AppColors.primary),
       errorBorder: border(AppColors.danger),
       focusedErrorBorder: border(AppColors.danger),
+    );
+  }
+
+  Widget _buildParentField() {
+    final options = widget.parentOptions;
+    final selected = widget.initialParentId;
+    final missing = selected != null && !options.any((c) => c.id == selected);
+
+    return DropdownButtonFormField<String?>(
+      value: _parentId,
+      isExpanded: true,
+      decoration: _decoration('Danh mục cha', '').copyWith(
+        helperText: widget.parentLocked
+            ? 'Thể loại này đang có thể loại con nên không thể trở thành thể loại con.'
+            : 'Để mặc định nếu đây là thể loại cha.',
+        helperMaxLines: 2,
+      ),
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('— Không có (thể loại cha) —'),
+        ),
+        if (missing)
+          DropdownMenuItem<String?>(
+            value: selected,
+            child: Text('Mã $selected (không khả dụng)'),
+          ),
+        for (final c in options)
+          DropdownMenuItem<String?>(
+            value: c.id,
+            child: Text(c.name, overflow: TextOverflow.ellipsis),
+          ),
+      ],
+            onChanged: widget.parentLocked
+          ? null
+          : (value) => setState(() => _parentId = value),
     );
   }
 
@@ -112,6 +160,8 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                 maxLines: 3,
                 decoration: _decoration('Mô tả', 'Mô tả ngắn về thể loại'),
               ),
+              const SizedBox(height: 16),
+              _buildParentField(),
             ],
           ),
         ),
