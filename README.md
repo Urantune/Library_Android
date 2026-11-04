@@ -2,7 +2,7 @@
 
 Branch `Server` contains the Spring Boot server source and has independent history from Android branch `main`.
 
-Modules in this source snapshot: discovery-service, identity-service, catalog-service, circulation-service, reservation-service, notification-service and the existing legacy renting-sevice.
+Modules in this source snapshot: api-gateway, discovery-service, identity-service, catalog-service, circulation-service, reservation-service and notification-service.
 
 Read `continue.md` before work and update only your assigned section after each session. Runtime SQLite files, Maven caches and build output are excluded from Git; SQL migrations remain tracked.
 

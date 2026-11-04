@@ -11,16 +11,11 @@ Contract hướng dẫn hiện tại: LM-1.1.1.
 Khởi tạo file này không có nghĩa tính năng của bất kỳ thành viên nào đã hoàn thành. Các phần chưa có bàn giao phải kiểm tra source thực tế.
 
 ===== NGUOI 1 - Dương Phúc Khang =====
-Cập nhật 2026-11-01. Server f3fd74d, Android 8063704 đã pull; chưa commit/push các thay đổi hôm nay theo yêu cầu.
-Phạm vi Khang: Book và đăng ký/đăng nhập/đăng xuất; Identity Java 21/Spring Boot, SQLite, BCrypt, RSA JWT, refresh rotation và throttling giữ nguyên.
-Luồng mặc định mới: Flutter Windows/Android -> API Gateway 8080 -> Eureka 8761 -> Identity 8081 hoặc Catalog 8082. Gateway định tuyến, các service chạy thành tiến trình riêng.
-Android: thêm core/config/api_config.dart để mặc định Windows dùng 127.0.0.1:8080, emulator dùng 10.0.2.2:8080. AuthConfig và ApiClient.catalogDio dùng Gateway; vẫn hỗ trợ API_BASE_URL/AUTH_BASE_URL/CATALOG_API_URL.
-Server: Catalog bật Eureka; CatalogServiceApplication dùng ApplicationHome để tìm đúng data/catalog.db cả khi chạy executable jar. Đã xác nhận jar tự tìm đúng database mà không cần DB_PATH.
-Kiểm chứng hôm nay: build 4 service thành công với JDK 21; Flutter Windows debug build thành công; analyze file thay đổi không lỗi; 11/11 Flutter tests pass gồm live register/login/restore/refresh/logout qua Gateway, live BookRemoteDataSource list/detail qua Gateway và UI auth/book tests. Gateway trả HTTP 200, 5 sách SQLite. Live book test gọi remote trực tiếp để không bị cơ chế fallback JSON che lỗi API.
-Chạy thử hôm nay theo yêu cầu: ngầm, không GUI; không xác nhận thao tác tay trên cửa sổ Windows. Các lần sau chạy bình thường bằng flutter run -d windows.
-Service đang chạy ngầm: Discovery PID 3448, Identity PID 5156, Gateway PID 4600, Catalog PID 2652. Log trong target/live-run.log và target/live-error.log của mỗi service. Cổng có thể thay đổi trạng thái khi tiến trình dừng; kiểm tra trước khi chạy lại.
-Lưu ý local: renting-sevice/pom.xml là thay đổi có sẵn trước pull, đã bảo toàn. identity-service/data/identity.db đổi do tạo tài khoản live test auth-check-...@example.com. Không reset database. BookRepository còn fallback JSON khi DioException; không suy từ việc UI có sách rằng API luôn hoạt động.
-Giới hạn: chưa kiểm chứng nghiệp vụ của thành viên khác, chưa bảo đảm revocation/quyền trên toàn bộ domain services. Chỉ commit/push khi người dùng yêu cầu.
+Cập nhật 2026-11-04. Đã fetch và fast-forward nhánh Server từ 6dba59e lên 3e05b03, giữ các commit Category mới trên remote.
+Phạm vi phiên này: bỏ module legacy renting-sevice vì không thuộc kiến trúc 7 service; mượn/trả dùng circulation-service. Đã bỏ module khỏi parent pom, cập nhật README và xóa thư mục renting-sevice.
+Database theo blueprint: identity-service/data/identity.db, catalog-service/data/catalog.db, circulation-service/data/circulation.db, reservation-service/data/reservation.db, notification-service/data/notification.db đều đã có và được Git theo dõi. Discovery và Gateway không cần SQLite. Không tạo thêm DB.
+Thay đổi local có sẵn cần giữ ngoài phần xóa: identity-service/data/identity.db do live test; file lock Word tạm ở repo root. Thay đổi renting-sevice/pom.xml bị xóa cùng module theo yêu cầu xóa service.
+Kiểm chứng và bước tiếp: xác nhận parent pom/README không còn module legacy; commit và push riêng phần xóa lên Server.
 ===== HET NGUOI 1 =====
 
 ===== NGUOI 2 - Đỗ Trọng Trí =====
