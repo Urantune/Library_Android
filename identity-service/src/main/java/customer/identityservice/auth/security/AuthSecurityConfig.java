@@ -56,6 +56,14 @@ public class AuthSecurityConfig {
                 .requestMatchers(HttpMethod.POST,"/api/auth/register","/api/auth/login","/api/auth/refresh").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.GET,"/api/users/me").authenticated()
+                .requestMatchers(HttpMethod.GET,"/api/users/me/profile").authenticated()
+                .requestMatchers(HttpMethod.PUT,"/api/users/me").authenticated()
+                .requestMatchers(HttpMethod.GET,"/api/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET,"/api/users/{id}").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST,"/api/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,"/api/users/{id}").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH,"/api/users/{id}/status").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE,"/api/users/{id}").hasRole("ADMIN")
                 .requestMatchers("/actuator/**","/v3/api-docs/**","/swagger-ui/**","/swagger-ui.html","/error").permitAll()
                 .anyRequest().denyAll())
             .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter))
@@ -69,9 +77,9 @@ public class AuthSecurityConfig {
     private CorsConfigurationSource cors() {
         var cors=new CorsConfiguration();
         cors.setAllowedOriginPatterns(java.util.List.of("http://localhost:*","http://127.0.0.1:*"));
-        cors.setAllowedMethods(java.util.List.of("GET","POST","OPTIONS"));
-        cors.setAllowedHeaders(java.util.List.of("Authorization","Content-Type","X-Correlation-Id","X-Trace-Id","X-Trace-Id"));
-        cors.setExposedHeaders(java.util.List.of("Retry-After","X-Correlation-Id","X-Trace-Id","X-Trace-Id"));
+        cors.setAllowedMethods(java.util.List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        cors.setAllowedHeaders(java.util.List.of("Authorization","Content-Type","X-Correlation-Id","X-Trace-Id"));
+        cors.setExposedHeaders(java.util.List.of("Retry-After","X-Correlation-Id","X-Trace-Id"));
         var source=new UrlBasedCorsConfigurationSource();source.registerCorsConfiguration("/api/**",cors);return source;
     }
 }
