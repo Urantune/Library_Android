@@ -1,0 +1,13 @@
+.git
+.idea
+.vscode
+**/target
+**/build
+**/data
+**/.m2
+android
+renting-sevice
+*.db
+*.db-wal
+*.db-shm
+*.log

@@ -3,7 +3,13 @@ package customer.reservationservice;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:sqlite:target/reservation-test.db",
+        "spring.datasource.driver-class-name=org.sqlite.JDBC",
+        "spring.jpa.database-platform=org.hibernate.community.dialect.SQLiteDialect",
+        "eureka.client.enabled=false",
+        "spring.cloud.discovery.enabled=false"
+})
 class ReservationServiceApplicationTests {
 
     @Test

@@ -56,7 +56,7 @@ public class AuthSecurityConfig {
                 .requestMatchers(HttpMethod.POST,"/api/auth/register","/api/auth/login","/api/auth/refresh").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.GET,"/api/users/me").authenticated()
-                .requestMatchers("/v3/api-docs/**","/swagger-ui/**","/swagger-ui.html","/error").permitAll()
+                .requestMatchers("/actuator/**","/v3/api-docs/**","/swagger-ui/**","/swagger-ui.html","/error").permitAll()
                 .anyRequest().denyAll())
             .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter))
                 .authenticationEntryPoint((request,response,ex) -> errors.send(request,response,401,"SESSION_EXPIRED","Phiên đăng nhập không hợp lệ hoặc đã hết hạn.",Map.of())))

@@ -89,15 +89,13 @@ Commit / branch: Chưa ghi nhận.
 ===== HET NGUOI 6 =====
 
 ===== NGUOI 7 - Hà Minh Mẫn =====
-Cập nhật: Chưa có bàn giao phiên triển khai được xác minh.
-Contract đã đọc: Chưa ghi nhận.
-Task / trạng thái: Chưa đối chiếu source.
-Đã làm và cần giữ: Chưa ghi nhận; không suy từ tên class trong thiết kế.
-File / class / function thay đổi: Chưa ghi nhận.
-API / DTO / Kafka / migration ảnh hưởng: Chưa ghi nhận.
-Kiểm chứng: Chưa ghi nhận lệnh và kết quả test.
-Chưa xong / lỗi / dependency: Đọc file tổng và file cá nhân được đính kèm; kiểm tra branch và dirty state.
-Bước tiếp theo: Đối chiếu code thực tế với task được giao, thực hiện đúng phạm vi, rồi thay nội dung phần này bằng kết quả mới nhất.
-Commit / branch: Chưa ghi nhận.
-===== HET NGUOI 7 =====
+Cập nhật 2026-11-04. Đối chiếu file owner `ha_minh_man.md` và team playbook: backend stateful services phải tiếp tục dùng SQLite riêng theo service; PostgreSQL chỉ là hạ tầng MSS-005 trong Compose. Android không có SQLite database dependency.
+Task / trạng thái: MSS-001/002/003/004/005/045 được cấu hình trong phạm vi hạ tầng. MSS-001 ghi boundary và database ownership; không sửa domain schema. Runtime Docker và Maven build chưa xác minh được trong môi trường hiện tại.
+Đã làm và giữ: parent Maven reactor chỉ gồm 7 canonical services; Eureka 8761; Gateway 8080, routes và trace ID; Compose PostgreSQL 16, Redis, Kafka/topics, Discovery/Gateway cùng apps profile; Dockerfile; Actuator health/readiness/metrics/Prometheus. Năm service stateful dùng SQLite file theo config/migrations hiện có. PostgreSQL không được nối làm datasource domain. `renting-sevice` vẫn ngoài reactor.
+Đã hoàn tác phần sai phạm vi: bỏ PostgreSQL service DB/role init, PG-specific migrations và test configs; khôi phục SQLite dependencies/config/entity/tests; giữ nguyên dữ liệu `.db` có sẵn. Compose vẫn có PostgreSQL cho MSS-005.
+File / class / function: root `pom.xml`, `compose.yaml`, Dockerfile, `.env.example`, README, ADR-001; discovery/gateway configs, Gateway trace filter/test; 7 module POMs; canonical service configs; `continue.md`. Không đổi domain behavior/schema.
+API / DTO / Kafka / migration: Không thêm endpoint hay Kafka topic mới trong hạ tầng. Không thêm/sửa domain migration.
+Kiểm chứng: `docker compose config --quiet` và Maven wrapper/POM parse cần chạy lại sau rollback. Trước đó Docker Engine không khả dụng và Maven Central không phân giải được DNS; không tuyên bố runtime/test pass. SQLite files có sẵn được giữ nguyên.
+Bước triển khai sau khi Docker Desktop chạy: `docker compose config --quiet`; `docker compose up --build -d --wait`; kiểm tra health Discovery/Gateway, Redis/Kafka/Postgres; sau đó `docker compose --profile apps up --build -d --wait --wait-timeout 300`; kiểm tra service health và Eureka registry. Lệnh chi tiết + kết quả mong đợi ở README.
+Commit / branch: Chưa commit/push.===== HET NGUOI 7 =====
 
