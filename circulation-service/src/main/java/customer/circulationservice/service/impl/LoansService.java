@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
+@Slf4j
 public class LoansService implements ILoansService {
     LoansRepository loansRepository;
     LoanItemsRepository loanItemsRepository;
@@ -84,22 +86,38 @@ public class LoansService implements ILoansService {
 
     private UserDto getActiveUser(String userId) {
         final UserDto user;
+
         try {
-            UserDto.Envelope<UserDto> envelope = loansClient.get(userId);
+            UserDto.Envelope<UserDto> envelope = loansClient.getCurrentUser();
+
+            log.info("Identity response: {}", envelope);
+
             user = envelope == null ? null : envelope.data();
+
         } catch (FeignException exception) {
+
+            log.error(
+                    "Identity service error - status: {}, body: {}",
+                    exception.status(),
+                    exception.contentUTF8(),
+                    exception
+            );
+
             if (exception.status() == 404) {
                 throw new AppException(ErrorCode.USER_NOT_FOUND);
             }
+
             throw new AppException(ErrorCode.IDENTITY_SERVICE_UNAVAILABLE);
         }
 
         if (user == null || !userId.equals(user.id())) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
+
         if (!"ACTIVE".equalsIgnoreCase(user.status())) {
             throw new AppException(ErrorCode.USER_NOT_ACTIVE);
         }
+
         return user;
     }
 
