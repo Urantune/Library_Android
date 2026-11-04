@@ -57,7 +57,6 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
             return exchange.getResponse().setComplete();
         }
 
-        boolean profileRead = path.endsWith("/me") && (request.getMethod().name().equals("GET") || request.getMethod().name().equals("PUT"));
         boolean adminOperation = claims.roles().contains("ADMIN")
                 && (path.endsWith("/users") || path.matches(".*/users/[^/]+(/status)?$")
                 && List.of("GET", "PUT", "PATCH", "DELETE").contains(request.getMethod().name())

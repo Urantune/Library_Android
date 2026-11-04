@@ -39,9 +39,6 @@ public class UserController {
         return Envelope.success("Chi tiết người dùng", service.get(id), traceId(request));
     }
 
-    @GetMapping("/me")
-    public Envelope<UserDto> me(@RequestHeader("X-User-Id") String userId, HttpServletRequest request) {
-        return Envelope.success("Hồ sơ cá nhân", service.get(userId), traceId(request));
     }
 
     @PutMapping("/me")
