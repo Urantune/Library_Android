@@ -1,48 +1,94 @@
-import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 
-import '../models/book.dart';
-import '../models/stat_item.dart';
+import '../../features/authors/data/datasources/author_remote_data_source.dart';
+import '../../features/books/data/dto/book_dto.dart';
+import '../../features/books/domain/entities/book.dart';
 
-/// Nguồn dữ liệu cho Dashboard (hiện là dữ liệu mẫu,
-/// sau này thay bằng gọi API tại đây).
+class BooksOverview {
+  const BooksOverview({required this.total, required this.items});
+
+  final int total;
+  final List<Book> items;
+}
+
 class DashboardService {
-  static List<StatItem> getStats() => const [
-        StatItem(
-          icon: Icons.menu_book_rounded,
-          color: Color(0xFF2563EB),
-          label: 'Tổng sách',
-          value: '1,245',
-          change: '+ 12%',
-        ),
-        StatItem(
-          icon: Icons.import_contacts_rounded,
-          color: Color(0xFFF59E0B),
-          label: 'Đang mượn',
-          value: '86',
-          change: '+ 33%',
-        ),
-        StatItem(
-          icon: Icons.bookmark_rounded,
-          color: Color(0xFFEF4444),
-          label: 'Đặt trước',
-          value: '24',
-          change: '+ 55%',
-        ),
-        StatItem(
-          icon: Icons.person_rounded,
-          color: Color(0xFF06B6D4),
-          label: 'Người dùng',
-          value: '532',
-          change: '+ 58%',
-        ),
-      ];
+  DashboardService({
+    required Dio dio,
+    required AuthorRemoteDataSource authors,
+  })  : _dio = dio,
+        _authors = authors;
 
-  static List<Book> getPopularBooks() => const [
-        Book('Dế Mèn phiêu lưu ký', 'Nguyễn Nhật Ánh', 30, Color(0xFF7CB342)),
-        Book('Nhà giả kim', 'Paulo Coelho', 28, Color(0xFFE67E22)),
-        Book('Đắc nhân tâm', 'Dale Carnegie', 25, Color(0xFF212121)),
-        Book('Tuổi trẻ đáng giá bao nhiêu', 'Rosie Nguyễn', 20,
-            Color(0xFF1E3A8A)),
-        Book('Clean Code', 'Robert C. Martin', 18, Color(0xFF111827)),
-      ];
+  final Dio _dio;
+  final AuthorRemoteDataSource _authors;
+
+  Future<BooksOverview> fetchBooksOverview({int limit = 5}) async {
+    final response = await _dio.get<dynamic>(
+      '/api/books',
+      queryParameters: {'page': 0, 'size': limit},
+    );
+    final data = _unwrap(response.data);
+    final books = (_itemsOf(data) ?? const <dynamic>[])
+        .whereType<Map>()
+        .map((e) => BookDto(Map<String, dynamic>.from(e)).toDomain())
+        .toList();
+    return BooksOverview(total: _totalOf(data) ?? books.length, items: books);
+  }
+
+  Future<int> countAuthors() async {
+    final page = await _authors.fetchAuthors(page: 0, size: 1);
+    return page.totalElements;
+  }
+
+  Future<int> countCategories() =>
+      _count('/api/categories', const {'status': 'ACTIVE'});
+
+  Future<int> countPublishers() => _count('/api/publishers');
+
+  Future<int> _count(
+    String path, [
+    Map<String, dynamic> query = const {},
+  ]) async {
+    final first = await _dio.get<dynamic>(
+      path,
+      queryParameters: {...query, 'page': 0, 'size': 1},
+    );
+    final total = _totalOf(_unwrap(first.data));
+    if (total != null) return total;
+
+    final all = await _dio.get<dynamic>(
+      path,
+      queryParameters: {...query, 'page': 0, 'size': 100},
+    );
+    return _itemsOf(_unwrap(all.data))?.length ?? 0;
+  }
+
+  dynamic _unwrap(dynamic body) {
+    var current = body;
+    for (var i = 0; i < 4; i++) {
+      if (current is Map && current['data'] != null) {
+        current = current['data'];
+      } else if (current is Map && current['result'] != null) {
+        current = current['result'];
+      } else {
+        break;
+      }
+    }
+    return current;
+  }
+
+  List<dynamic>? _itemsOf(dynamic data) {
+    if (data is List) return data;
+    if (data is Map) {
+      final items = data['items'] ?? data['content'];
+      if (items is List) return items;
+    }
+    return null;
+  }
+
+  int? _totalOf(dynamic data) {
+    if (data is! Map) return null;
+    final raw = data['totalElements'] ?? data['total'];
+    if (raw == null) return null;
+    return raw is num ? raw.toInt() : int.tryParse('$raw');
+  }
 }

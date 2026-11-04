@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Menu nằm cố định phía dưới, nội dung trượt sang phải khi menu mở.
 class PushMenuLayout extends StatelessWidget {
   final bool isOpen;
   final VoidCallback onClose;

@@ -28,7 +28,7 @@ class _SidebarTileState extends State<SidebarTile> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
-    final hovering = _hovered && !selected; // chỉ áp dụng cho thẻ chưa chọn
+    final hovering = _hovered && !selected;
 
     final textColor = selected
         ? AppColors.primary
@@ -49,7 +49,6 @@ class _SidebarTileState extends State<SidebarTile> {
         duration: _duration,
         curve: _curve,
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        // Thẻ nổi lên nhẹ khi hover
         transform: Matrix4.translationValues(0, hovering ? -2 : 0, 0),
         decoration: BoxDecoration(
           color: selected

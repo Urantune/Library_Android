@@ -18,7 +18,6 @@ import '../widgets/top_bar.dart';
 import 'dashboard_home.dart';
 import 'placeholder_page.dart';
 
-/// Khung chính (điều hướng).
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
@@ -65,7 +64,6 @@ class DashboardPage extends StatelessWidget {
     final showBottomNav = nav.showBottomNav;
 
     return Scaffold(
-      // Nền phía sau là màu sidebar → khi nội dung trượt đi sẽ lộ ra liền mạch.
       backgroundColor: AppColors.sidebar,
       body: PushMenuLayout(
         isOpen: nav.isMenuOpen,
@@ -73,7 +71,7 @@ class DashboardPage extends StatelessWidget {
         menu: SafeArea(
           child: Sidebar(
             selectedIndex: nav.selectedIndex,
-            onSelected: nav.selectMenu, // chọn xong tự đóng menu
+            onSelected: nav.selectMenu,
             onClose: nav.closeMenu,
           ),
         ),
@@ -93,7 +91,7 @@ class DashboardPage extends StatelessWidget {
                 ),
               ),
             ),
-            // Bottom nav nằm trong nội dung nên cũng trượt theo
+
             if (showBottomNav)
               BottomNavBar(
                 currentIndex: nav.bottomNavIndex,

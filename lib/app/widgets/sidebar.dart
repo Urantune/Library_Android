@@ -29,9 +29,8 @@ class Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: logo + nút 3 gạch (đóng menu)
           SizedBox(
-            height: 72, // bằng chiều cao TopBar
+            height: 72,
             child: Padding(
               padding: const EdgeInsets.only(left: 20, right: 12),
               child: Row(
@@ -87,11 +86,12 @@ class Sidebar extends StatelessWidget {
               selected: selectedIndex == mainItems.length + i,
               onTap: () => onSelected(mainItems.length + i),
             ),
-          // Nút đăng xuất
+
+          
           SidebarTile(
             item: const MenuItem(Icons.logout_rounded, 'Đăng xuất'),
             selected:
-                false, // không phải một trang nên không bao giờ "đang chọn"
+                false,
             onTap: () => confirmLogout(context),
           ),
         ],

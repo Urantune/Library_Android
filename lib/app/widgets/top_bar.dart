@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart'
+    show ReadContext, WatchContext, SelectContext;
 
 import '../../features/notifications/presentation/screens/notification_list_screen.dart';
+import '../../features/sign/controllers/auth_controller.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
+import '../models/user_role.dart';
 import '../providers/navigation_provider.dart';
 import '../theme/app_colors.dart';
 
-class TopBar extends StatelessWidget {
+class TopBar extends ConsumerWidget {
   const TopBar({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final nav = context.watch<NavigationProvider>();
-    // Thanh tìm kiếm toàn cục chỉ hiện trên trang chủ (dashboard + bottom nav index 0).
-    // Các tab khác đã có thanh tìm kiếm riêng theo chức năng.
+    final user = ref.watch(authControllerProvider.select((s) => s.user));
+    final fullName = user?.fullName.trim() ?? '';
+    final displayName = fullName.isNotEmpty
+        ? fullName
+        : ((user?.fullName ?? '').isNotEmpty ? user!.fullName : 'Người dùng');
+    
     final showSearch =
         nav.selectedIndex == NavIndex.dashboard && nav.bottomNavIndex == 0;
 
@@ -23,7 +31,6 @@ class TopBar extends StatelessWidget {
       color: Colors.white,
       child: Row(
         children: [
-          // Nút 3 gạch — ẩn đi khi menu mở (lúc đó nút nằm trong sidebar)
           AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
             opacity: context
@@ -37,7 +44,6 @@ class TopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Ô tìm kiếm — chỉ hiện trên trang chủ.
           if (showSearch)
             Expanded(
               child: Align(
@@ -66,7 +72,6 @@ class TopBar extends StatelessWidget {
           else
             const Spacer(),
           if (showSearch) const SizedBox(width: 16),
-          // Thông tin người dùng — bấm để mở hồ sơ cá nhân
           InkWell(
             borderRadius: BorderRadius.circular(24),
             onTap: () => Navigator.of(context).push(
@@ -84,26 +89,33 @@ class TopBar extends StatelessWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Nguyễn Văn A',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark),
-                ),
-                Text(
-                  'Thủ thư',
-                  style: TextStyle(fontSize: 11, color: AppColors.textGrey),
-                ),
-              ],
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark),
+                  ),
+                  Text(
+                    roleLabel(user?.roles.firstOrNull),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textGrey),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 16),
-          // Chuông thông báo — bấm để mở danh sách thông báo
           InkWell(
             borderRadius: BorderRadius.circular(24),
             onTap: () => Navigator.of(context).push(

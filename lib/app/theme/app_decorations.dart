@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Kiểu thẻ (card) dùng chung cho toàn app.
 BoxDecoration cardDecoration() => BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
