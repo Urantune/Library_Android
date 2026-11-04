@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../models/book_category.dart';
 import 'app_colors.dart';
 
-/// Hộp thoại xác nhận xóa. Trả về true nếu người dùng đồng ý.
 class DeleteConfirmDialog extends StatelessWidget {
   final BookCategory category;
   const DeleteConfirmDialog({super.key, required this.category});
@@ -32,8 +31,7 @@ class DeleteConfirmDialog extends StatelessWidget {
         width: 400,
         child: Text(
           'Bạn có chắc muốn xóa thể loại "${category.name}"?'
-          '${category.bookCount > 0 ? '\nThể loại này hiện có ${category.bookCount} sách.' : ''}'
-          '\nHành động này không thể hoàn tác.',
+          '\nThể loại sẽ được chuyển sang trạng thái ngừng hoạt động.',
           style: const TextStyle(
               fontSize: 14, color: AppColors.textDark, height: 1.4),
         ),

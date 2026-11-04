@@ -1,138 +1,168 @@
-import 'dart:math';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
 import '../models/book_category.dart';
-import '../services/category_storage_service.dart';
+import '../services/category_api_service.dart';
 
-/// Kết quả của thao tác sửa.
+class ParentOptions {
+  final List<BookCategory> roots;
+  final bool locked;
+  const ParentOptions(this.roots, {this.locked = false});
+}
+
 enum UpdateResult { updated, unchanged, notFound }
 
-/// Giữ toàn bộ trạng thái của trang Thể loại:
-/// dữ liệu, tìm kiếm, phân trang và các thao tác C / U / D.
 class CategoryProvider extends ChangeNotifier {
-  CategoryProvider(this._service);
+  CategoryProvider(this._api);
 
   static const pageSize = 5;
+  static const _searchDebounce = Duration(milliseconds: 400);
 
-  final CategoryStorageService _service;
+  final CategoryApiService _api;
 
-  List<BookCategory> _all = [];
+  List<BookCategory> _items = [];
   bool _loading = true;
   String? _error;
   String _query = '';
-  int _currentPage = 1;
+  int _page = 1; // tính từ 1
+  int _totalPages = 1;
+  int _totalElements = 0;
   bool _disposed = false;
 
-  // ── Trạng thái cho giao diện ──
+  Timer? _debounce;
+  int _requestSeq = 0;
+
   bool get loading => _loading;
   String? get error => _error;
   String get query => _query;
+  int get page => _page;
+  int get totalPages => _totalPages;
+  int get totalElements => _totalElements;
+  int get startIndex => (_page - 1) * pageSize;
+  List<BookCategory> get pageItems => _items;
 
-  List<BookCategory> get filtered {
-    final q = _query.trim().toLowerCase();
-    if (q.isEmpty) return _all;
-    return _all.where((c) => c.name.toLowerCase().contains(q)).toList();
-  }
-
-  int get totalPages {
-    final count = filtered.length;
-    return count == 0 ? 1 : (count + pageSize - 1) ~/ pageSize;
-  }
-
-  int get page => _currentPage.clamp(1, totalPages);
-  int get startIndex => (page - 1) * pageSize;
-
-  List<BookCategory> get pageItems =>
-      filtered.skip(startIndex).take(pageSize).toList();
-
-  /// Các tên đã tồn tại (bỏ qua [excludeId]) để form chặn trùng tên.
-  List<String> takenNames({int? excludeId}) => [
-        for (final c in _all)
-          if (c.id != excludeId) c.name,
-      ];
-
-  BookCategory? findById(int id) {
-    for (final c in _all) {
+  BookCategory? findById(String id) {
+    for (final c in _items) {
       if (c.id == id) return c;
     }
     return null;
   }
 
-  // ── R: đọc dữ liệu từ tt.json ──
   Future<void> load({bool showSpinner = true}) async {
+    final seq = ++_requestSeq;
     if (showSpinner) {
       _loading = true;
       _error = null;
       _notify();
     }
     try {
-      final data = await _service.load();
-      debugPrint('tt.json: ${await _service.path()}');
-      _all = data;
+      final result = await _api.search(
+        keyword: _query,
+        page: _page,
+        size: pageSize,
+      );
+      if (seq != _requestSeq) return;
+
+      if (result.content.isEmpty && _page > 1 && result.totalPages > 0) {
+        _page = result.totalPages;
+        return load(showSpinner: false);
+      }
+
+      _items = result.content;
+      _totalPages = result.totalPages == 0 ? 1 : result.totalPages;
+      _totalElements = result.totalElements;
       _loading = false;
       _error = null;
-      _currentPage = page; // kéo về trang hợp lệ
+    } on ApiException catch (e) {
+      if (seq != _requestSeq) return;
+      _error = e.message;
+      _loading = false;
     } catch (e) {
-      _error = 'Không đọc được dữ liệu: $e';
+      if (seq != _requestSeq) return;
+      _error = 'Không tải được dữ liệu: $e';
       _loading = false;
     }
     _notify();
   }
 
-  // ── Tìm kiếm / phân trang ──
+  Future<ParentOptions> loadParentOptions({String? excludeId}) async {
+    final all = await _api.listActive();
+    final hasChildren =
+        excludeId != null && all.any((c) => c.parentId == excludeId);
+    final roots = all
+        .where((c) => c.parentId == null && c.id != excludeId)
+        .toList();
+    return ParentOptions(roots, locked: hasChildren);
+  }
+
+  Future<String?> parentNameOf(String? parentId) async {
+    if (parentId == null) return null;
+    final local = findById(parentId);
+    if (local != null) return local.name;
+    try {
+      return (await _api.getById(parentId)).name;
+    } catch (_) {
+      return null;
+    }
+  }
+
   void setQuery(String value) {
     _query = value;
-    _currentPage = 1;
-    _notify();
+    _page = 1;
+    _debounce?.cancel();
+    _debounce = Timer(_searchDebounce, () => load(showSpinner: false));
   }
 
   void goToPage(int target) {
-    _currentPage = target.clamp(1, totalPages);
-    _notify();
+    final next = target.clamp(1, _totalPages);
+    if (next == _page) return;
+    _page = next;
+    load(showSpinner: false);
   }
 
-  // ── C: thêm ──
-  /// Ném lỗi nếu không lưu được (danh sách trong bộ nhớ không bị đổi).
-  Future<void> add(String name, String description) async {
-    final nextId = _all.isEmpty ? 1 : _all.map((c) => c.id).reduce(max) + 1;
-    final updated = [
-      ..._all,
-      BookCategory(id: nextId, name: name, description: description),
-    ];
-    await _service.save(updated);
-    _all = updated;
-    _notify();
+  Future<void> add(String name, String description, {String? parentId}) async {
+    await _api.create(
+      name: name,
+      description: description,
+      parentId: parentId,
+    );
+    await load(showSpinner: false);
   }
 
-  // ── U: sửa ──
-  Future<UpdateResult> update(int id, String name, String description) async {
-    final index = _all.indexWhere((c) => c.id == id);
-    if (index == -1) return UpdateResult.notFound;
-
-    final current = _all[index];
-    if (current.name == name && current.description == description) {
+  Future<UpdateResult> update(
+    String id,
+    String name,
+    String description, {
+    String? parentId,
+  }) async {
+    final current = findById(id);
+    if (current == null) return UpdateResult.notFound;
+    if (current.name == name &&
+        current.description == description &&
+        current.parentId == parentId) {
       return UpdateResult.unchanged;
     }
-
-    final updated = [..._all];
-    updated[index] = current.copyWith(name: name, description: description);
-    await _service.save(updated);
-    _all = updated;
-    _notify();
+    try {
+      await _api.update(
+        id,
+        name: name,
+        description: description,
+        parentId: parentId,
+      );
+    } on ApiException catch (e) {
+      if (e.isNotFound) return UpdateResult.notFound;
+      rethrow;
+    }
+    await load(showSpinner: false);
     return UpdateResult.updated;
   }
 
-  // ── D: xóa ──
-  Future<void> delete(int id) async {
-    final updated = _all.where((c) => c.id != id).toList();
-    await _service.save(updated);
-    _all = updated;
-    _currentPage = page;
-    _notify();
+  Future<void> delete(String id) async {
+    await _api.delete(id);
+    await load(showSpinner: false);
   }
 
-  // ── Tránh notify sau khi provider đã bị hủy (khi đang await) ──
   void _notify() {
     if (!_disposed) notifyListeners();
   }
@@ -140,6 +170,7 @@ class CategoryProvider extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _debounce?.cancel();
     super.dispose();
   }
 }

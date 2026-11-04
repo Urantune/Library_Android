@@ -96,10 +96,6 @@ class _HeaderRow extends StatelessWidget {
             flex: CategoryColumns.descFlex,
             child: Text('Mô tả', style: style),
           ),
-          Expanded(
-            flex: CategoryColumns.countFlex,
-            child: Text('Số sách', textAlign: TextAlign.center, style: style),
-          ),
           SizedBox(
             width: CategoryColumns.actions,
             child: Text('Thao tác', textAlign: TextAlign.center, style: style),

@@ -1,35 +1,49 @@
-// ───────────────────────── Model ─────────────────────────
+enum CategoryStatus {
+  active,
+  inactive;
+
+  static CategoryStatus fromJson(String? value) =>
+      value?.toUpperCase() == 'INACTIVE'
+          ? CategoryStatus.inactive
+          : CategoryStatus.active;
+
+  String toJson() => name.toUpperCase();
+}
+
 class BookCategory {
-  final int id;
+  final String id;
   final String name;
   final String description;
-  final int bookCount;
+  final String? parentId;
+  final CategoryStatus status;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const BookCategory({
     required this.id,
     required this.name,
-    required this.description,
-    this.bookCount = 0,
+    this.description = '',
+    this.parentId,
+    this.status = CategoryStatus.active,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory BookCategory.fromJson(Map<String, dynamic> json) => BookCategory(
-        id: (json['id'] as num).toInt(),
+        id: json['id'].toString(),
         name: (json['name'] as String?) ?? '',
         description: (json['description'] as String?) ?? '',
-        bookCount: (json['bookCount'] as num?)?.toInt() ?? 0,
+        parentId: _nullIfEmpty(json['parentId']),
+        status: CategoryStatus.fromJson(json['status'] as String?),
+        createdAt: _parseDate(json['createdAt']),
+        updatedAt: _parseDate(json['updatedAt']),
       );
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'description': description,
-        'bookCount': bookCount,
-      };
+  static String? _nullIfEmpty(Object? v) {
+    final s = v?.toString();
+    return (s == null || s.isEmpty) ? null : s;
+  }
 
-  BookCategory copyWith({String? name, String? description}) => BookCategory(
-        id: id,
-        name: name ?? this.name,
-        description: description ?? this.description,
-        bookCount: bookCount,
-      );
+  static DateTime? _parseDate(Object? v) =>
+      v is String ? DateTime.tryParse(v) : null;
 }

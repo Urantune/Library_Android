@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Ô tìm kiếm + nút thêm thể loại.
 class CategoryToolbar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onCreate;

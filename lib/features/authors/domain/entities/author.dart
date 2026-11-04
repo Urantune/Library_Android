@@ -1,4 +1,3 @@
-
 class Author {
   final String id;
   final String name;
@@ -9,6 +8,7 @@ class Author {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+// const -> final
   const Author({
     required this.id,
     required this.name,

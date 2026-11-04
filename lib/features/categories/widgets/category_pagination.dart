@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Phân trang (hiện tối đa 5 số trang quanh trang hiện tại).
 class CategoryPagination extends StatelessWidget {
   final int current;
   final int total;

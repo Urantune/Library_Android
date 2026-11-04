@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../../app/app_router.dart';
-import '../../../app/providers/navigation_provider.dart';
 import '../constants/auth_constants.dart';
 import '../controllers/auth_controller.dart';
 import '../models/register_request.dart';
@@ -14,194 +12,143 @@ import '../widgets/auth_layout.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/primary_button.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthController(),
-      child: const _RegisterView(),
-    );
-  }
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterView extends StatefulWidget {
-  const _RegisterView();
-
-  @override
-  State<_RegisterView> createState() => _RegisterViewState();
-}
-
-class _RegisterViewState extends State<_RegisterView> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _confirmCtrl = TextEditingController();
-  bool _agreeTerms = false;
-  String? _termsError;
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _form = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _agreed = false;
+  bool _termsError = false;
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    _confirmCtrl.dispose();
+    for (final input in [_name, _email, _password, _confirm]) {
+      input.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _submit() async {
-    final formOk = _formKey.currentState!.validate();
-    if (!_agreeTerms) {
-      setState(() => _termsError = AuthStrings.mustAgreeTerms);
-    }
-    if (!formOk || !_agreeTerms) return;
-
-    final controller = context.read<AuthController>();
-    final response = await controller.register(
-      RegisterRequest(
-        fullName: _nameCtrl.text.trim(),
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text,
-      ),
-    );
-    if (!mounted || !response.success) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(response.message)),
-    );
-    _goToLogin();
+    final valid = _form.currentState!.validate();
+    setState(() => _termsError = !_agreed);
+    if (!valid || !_agreed) return;
+    final result = await ref.read(authControllerProvider.notifier).register(
+        RegisterRequest(
+            fullName: _name.text.trim(),
+            email: _email.text.trim(),
+            password: _password.text));
+    if (!mounted || !result.success) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result.message)));
+    context.go(AppRoutes.login);
   }
-
-    void _goToLogin() => context.go(AppRoutes.login);
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<AuthController>();
-
+    final state = ref.watch(authControllerProvider);
     return AuthLayout(
-      cardHeight: 720,
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        cardHeight: 740,
+        child: AutofillGroup(
+            child: Form(
+          key: _form,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const AuthHeader(
-              title: AuthStrings.registerTitle,
-              subtitle: AuthStrings.registerSubtitle,
-            ),
-            const SizedBox(height: 22),
-            if (controller.errorMessage != null) ...[
-              AuthErrorBanner(message: controller.errorMessage!),
-              const SizedBox(height: 14),
+                title: AuthStrings.registerTitle,
+                subtitle: AuthStrings.registerSubtitle),
+            const SizedBox(height: 24),
+            if (state.errorMessage != null) ...[
+              AuthErrorBanner(message: state.errorMessage!),
+              const SizedBox(height: 16),
             ],
             AuthTextField(
-              label: AuthStrings.fullName,
-              hint: AuthStrings.fullNameHint,
-              controller: _nameCtrl,
-              textInputAction: TextInputAction.next,
-              validator: Validators.fullName,
-              enabled: !controller.isLoading,
-            ),
-            const SizedBox(height: 14),
+                label: AuthStrings.fullName,
+                hint: AuthStrings.fullNameHint,
+                controller: _name,
+                validator: Validators.fullName,
+                autofillHints: const [AutofillHints.name],
+                textInputAction: TextInputAction.next,
+                enabled: !state.isLoading),
+            const SizedBox(height: 16),
             AuthTextField(
-              label: AuthStrings.email,
-              hint: AuthStrings.emailHint,
-              controller: _emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              validator: Validators.email,
-              onChanged: (_) => controller.clearError(),
-              enabled: !controller.isLoading,
-            ),
-            const SizedBox(height: 14),
+                label: AuthStrings.email,
+                hint: 'ban@example.com',
+                controller: _email,
+                validator: Validators.email,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
+                enabled: !state.isLoading),
+            const SizedBox(height: 16),
             AuthTextField(
-              label: AuthStrings.password,
-              hint: AuthStrings.passwordHint,
-              controller: _passwordCtrl,
-              isPassword: true,
-              textInputAction: TextInputAction.next,
-              validator: Validators.password,
-              enabled: !controller.isLoading,
-            ),
-            const SizedBox(height: 14),
+                label: AuthStrings.password,
+                hint: 'Tối thiểu 8 ký tự',
+                controller: _password,
+                validator: Validators.password,
+                isPassword: true,
+                autofillHints: const [AutofillHints.newPassword],
+                textInputAction: TextInputAction.next,
+                enabled: !state.isLoading),
+            const SizedBox(height: 16),
             AuthTextField(
-              label: AuthStrings.confirmPassword,
-              hint: AuthStrings.confirmPasswordHint,
-              controller: _confirmCtrl,
-              isPassword: true,
-              textInputAction: TextInputAction.done,
-              validator: Validators.confirmPassword(() => _passwordCtrl.text),
-              onSubmitted: (_) => _submit(),
-              enabled: !controller.isLoading,
-            ),
+                label: AuthStrings.confirmPassword,
+                hint: AuthStrings.confirmPasswordHint,
+                controller: _confirm,
+                validator: Validators.confirmPassword(() => _password.text),
+                isPassword: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
+                enabled: !state.isLoading),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: Checkbox(
-                    value: _agreeTerms,
-                    activeColor: AuthColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    onChanged: (v) => setState(() {
-                      _agreeTerms = v ?? false;
-                      if (_agreeTerms) _termsError = null;
-                    }),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    AuthStrings.agreeTerms,
-                    style: TextStyle(fontSize: 13, color: AuthColors.textPrimary),
-                  ),
-                ),
-              ],
-            ),
-            if (_termsError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  _termsError!,
-                  style: const TextStyle(fontSize: 12, color: AuthColors.error),
-                ),
-              ),
+            CheckboxListTile(
+                value: _agreed,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: const Text(AuthStrings.agreeTerms,
+                    style: TextStyle(fontSize: 13)),
+                onChanged: state.isLoading
+                    ? null
+                    : (value) => setState(() {
+                          _agreed = value ?? false;
+                          _termsError = false;
+                        })),
+            if (_termsError)
+              const Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text(AuthStrings.mustAgreeTerms,
+                      style: TextStyle(color: AuthColors.error, fontSize: 12))),
             const SizedBox(height: 18),
             PrimaryButton(
-              label: AuthStrings.registerTitle,
-              isLoading: controller.isLoading,
-              onPressed: _submit,
-            ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  AuthStrings.haveAccount,
-                  style: TextStyle(fontSize: 13, color: AuthColors.textSecondary),
-                ),
-                InkWell(
-                  onTap: controller.isLoading ? null : _goToLogin,
-                  child: const Text(
-                    AuthStrings.goToLogin,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AuthColors.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+                label: AuthStrings.registerTitle,
+                isLoading: state.isLoading,
+                onPressed: _submit),
+            const SizedBox(height: 16),
+            Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(AuthStrings.haveAccount,
+                      style: TextStyle(color: AuthColors.textSecondary)),
+                  TextButton(
+                      onPressed: state.isLoading
+                          ? null
+                          : () {
+                              ref
+                                  .read(authControllerProvider.notifier)
+                                  .clearError();
+                              context.go(AppRoutes.login);
+                            },
+                      child: const Text(AuthStrings.goToLogin)),
+                ]),
+          ]),
+        )));
   }
 }

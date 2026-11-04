@@ -8,13 +8,15 @@ class AuthorRemoteDataSource {
   AuthorRemoteDataSource({Dio? dio, this.baseUrl = 'http://localhost:8082'})
       : dio = dio ?? Dio();
 
-  Future<PageDTO<AuthorResponse>> fetchAuthors({int page = 0, int size = 20}) async {
+  Future<PageDTO<AuthorResponse>> fetchAuthors(
+      {int page = 0, int size = 20}) async {
     final response = await dio.get('$baseUrl/api/authors', queryParameters: {
       'page': page,
       'size': size,
     });
     final data = response.data;
-final pageJson = (data['result'] ?? data['data'] ?? data) as Map<String, dynamic>;
+    final pageJson =
+        (data['result'] ?? data['data'] ?? data) as Map<String, dynamic>;
     return PageDTO<AuthorResponse>.fromJson(
       pageJson,
       (json) => AuthorResponse.fromJson(json),
@@ -30,6 +32,32 @@ final pageJson = (data['result'] ?? data['data'] ?? data) as Map<String, dynamic
   }) async {
     await dio.post(
       '$baseUrl/api/authors',
+      data: {
+        'name': name,
+        'bio': bio,
+        'birthDate': _formatDate(birthDate),
+        'country': country,
+        'status': status,
+      },
+    );
+  }
+
+  Future<void> deleteAuthor(String id) async {
+    await dio.delete(
+      '$baseUrl/api/authors/${Uri.encodeComponent(id)}',
+    );
+  }
+
+  Future<void> updateAuthor({
+    required String id,
+    required String name,
+    String? bio,
+    DateTime? birthDate,
+    String? country,
+    required String status,
+  }) async {
+    await dio.put(
+      '$baseUrl/api/authors/${Uri.encodeComponent(id)}',
       data: {
         'name': name,
         'bio': bio,

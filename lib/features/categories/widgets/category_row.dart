@@ -5,7 +5,6 @@ import 'action_icon.dart';
 import 'app_colors.dart';
 import 'category_columns.dart';
 
-/// Một dòng dữ liệu trong bảng (có hiệu ứng hover).
 class CategoryRow extends StatefulWidget {
   final int index;
   final BookCategory category;
@@ -65,11 +64,6 @@ class _CategoryRowState extends State<CategoryRow> {
               child: Text(c.description,
                   maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
             ),
-            Expanded(
-              flex: CategoryColumns.countFlex,
-              child: Text('${c.bookCount}',
-                  textAlign: TextAlign.center, style: style),
-            ),
             SizedBox(
               width: CategoryColumns.actions,
               child: Row(
@@ -85,7 +79,7 @@ class _CategoryRowState extends State<CategoryRow> {
                     icon: Icons.edit_note_rounded,
                     tooltip: 'Chi tiết',
                     color: AppColors.primary,
-                    onTap: widget.onDetail ?? () {}, // chưa có chức năng
+                    onTap: widget.onDetail ?? () {},
                   ),
                   ActionIcon(
                     icon: Icons.delete_outline_rounded,
