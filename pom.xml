@@ -17,6 +17,5 @@
         <module>circulation-service</module>
         <module>reservation-service</module>
         <module>notification-service</module>
-        <module>renting-sevice</module>
     </modules>
 </project>
