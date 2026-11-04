@@ -8,7 +8,12 @@ import org.springframework.http.HttpStatusCode;
 public enum ErrorCode {
     UNCATEGORIZED_EXCEPTION(9999, "Uncategorized Exception", HttpStatus.INTERNAL_SERVER_ERROR),
     UNAUTHORIZED(1001, "Unauthorized", HttpStatus.UNAUTHORIZED),
-    INVALID_KEY(1002, "Invalid Key", HttpStatus.UNAUTHORIZED);
+    INVALID_KEY(1002, "Invalid Key", HttpStatus.UNAUTHORIZED),
+    USER_NOT_FOUND(1003, "User not found", HttpStatus.NOT_FOUND),
+    USER_NOT_ACTIVE(1004, "User is not active", HttpStatus.CONFLICT),
+    DUPLICATE_LOAN_ITEM(1005, "A book or copy appears more than once in the request", HttpStatus.BAD_REQUEST),
+    IDENTITY_SERVICE_UNAVAILABLE(1006, "Identity service is unavailable", HttpStatus.SERVICE_UNAVAILABLE),
+    BAD_REQUEST(1007, "Invalid request", HttpStatus.BAD_REQUEST);
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
         this.code = code;

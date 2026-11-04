@@ -53,14 +53,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ResponseEntity<ResponseAPI<Object>> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
-        String enumKey = ex.getBindingResult().getFieldError().getDefaultMessage();
-        ErrorCode errorCode = ErrorCode.INVALID_KEY;
+        var fieldError = ex.getBindingResult().getFieldError();
+        String enumKey = fieldError == null ? null : fieldError.getDefaultMessage();
+        ErrorCode errorCode = ErrorCode.BAD_REQUEST;
         Map<String, Object> attributes = null;
         try {
-            errorCode = ErrorCode.valueOf(enumKey);
-            var constrainViolations = ex.getBindingResult().getFieldErrors().getFirst().unwrap(ConstraintViolation.class);
-            attributes = constrainViolations.getConstraintDescriptor().getAttributes();
-            log.info(attributes.toString());
+            if (enumKey != null) {
+                errorCode = ErrorCode.valueOf(enumKey);
+                var constrainViolations = fieldError.unwrap(ConstraintViolation.class);
+                attributes = constrainViolations.getConstraintDescriptor().getAttributes();
+                log.info(attributes.toString());
+            }
         } catch (IllegalArgumentException e) {
 
         }
