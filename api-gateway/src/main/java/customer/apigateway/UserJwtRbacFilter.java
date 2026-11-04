@@ -33,9 +33,9 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
     private final String audience;
 
     public UserJwtRbacFilter(ObjectMapper mapper,
-            @Value("${security.jwt.public-key:}") Resource publicKeyResource,
-            @Value("${security.jwt.issuer:}") String issuer,
-            @Value("${security.jwt.audience:}") String audience) {
+                             @Value("${security.jwt.public-key:}") Resource publicKeyResource,
+                             @Value("${security.jwt.issuer:}") String issuer,
+                             @Value("${security.jwt.audience:}") String audience) {
         this.mapper = mapper;
         this.publicKeyResource = publicKeyResource;
         this.issuer = issuer;
@@ -57,11 +57,14 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
             return exchange.getResponse().setComplete();
         }
 
+        String method = request.getMethod().name();
+        boolean profileOperation = path.endsWith("/users/me")
+                && List.of("GET", "PUT").contains(method);
         boolean adminOperation = claims.roles().contains("ADMIN")
-                && (path.endsWith("/users") || path.matches(".*/users/[^/]+(/status)?$")
-                && List.of("GET", "PUT", "PATCH", "DELETE").contains(request.getMethod().name())
-                || request.getMethod().name().equals("POST") && path.endsWith("/users"));
-        if (!profileRead && !adminOperation) {
+                && ((path.endsWith("/users") && List.of("GET", "POST").contains(method))
+                || (path.matches(".*/users/[^/]+(/status)?$")
+                && List.of("GET", "PUT", "PATCH", "DELETE").contains(method)));
+        if (!profileOperation && !adminOperation) {
             exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
             return exchange.getResponse().setComplete();
         }
@@ -76,7 +79,8 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
     }
 
     private Claims verify(String authorization) throws Exception {
-        if (authorization == null || !authorization.startsWith("Bearer ") || !publicKeyResource.exists()) throw new SecurityException();
+        if (authorization == null || !authorization.startsWith("Bearer ") || !publicKeyResource.exists())
+            throw new SecurityException();
         String[] parts = authorization.substring(7).split("\\.");
         if (parts.length != 3) throw new SecurityException();
         Map<String, Object> header = mapper.readValue(Base64.getUrlDecoder().decode(parts[0]), Map.class);
@@ -91,11 +95,13 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
         if (!verifier.verify(Base64.getUrlDecoder().decode(parts[2]))) throw new SecurityException();
         Map<String, Object> payload = mapper.readValue(Base64.getUrlDecoder().decode(parts[1]), Map.class);
         if (!(payload.get("sub") instanceof String subject)
-                || !(payload.get("exp") instanceof Number exp) || exp.longValue() <= Instant.now().getEpochSecond()) throw new SecurityException();
+                || !(payload.get("exp") instanceof Number exp) || exp.longValue() <= Instant.now().getEpochSecond())
+            throw new SecurityException();
         if (issuer.isBlank() || audience.isBlank() || !issuer.equals(payload.get("iss"))) throw new SecurityException();
         Object tokenAudience = payload.get("aud");
         if (!(tokenAudience instanceof String value && audience.equals(value))
-                && !(tokenAudience instanceof Collection<?> values && values.contains(audience))) throw new SecurityException();
+                && !(tokenAudience instanceof Collection<?> values && values.contains(audience)))
+            throw new SecurityException();
         Object rawRoles = payload.get("roles");
         List<String> roles = rawRoles instanceof Collection<?> collection
                 ? collection.stream().map(String::valueOf).toList()
@@ -103,6 +109,11 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
         return new Claims(subject, roles);
     }
 
-    @Override public int getOrder() { return Ordered.HIGHEST_PRECEDENCE; }
-    private record Claims(String subject, List<String> roles) {}
+    @Override
+    public int getOrder() {
+        return Ordered.HIGHEST_PRECEDENCE;
+    }
+
+    private record Claims(String subject, List<String> roles) {
+    }
 }

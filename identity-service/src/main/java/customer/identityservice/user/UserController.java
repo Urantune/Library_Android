@@ -39,15 +39,15 @@ public class UserController {
         return Envelope.success("Chi tiết người dùng", service.get(id), traceId(request));
     }
 
-    }
 
     @PutMapping("/me")
-    public Envelope<UserDto> updateMe(@RequestHeader("X-User-Id") String userId,
-            @RequestBody ProfileInput input, HttpServletRequest request) {
+    public Envelope<UserDto> updateMe(@RequestHeader("X-User-Id") String userId, @RequestBody ProfileInput input, HttpServletRequest request) {
         return Envelope.success("Đã cập nhật hồ sơ", service.updateProfile(userId, input.fullName(), input.phone()), traceId(request));
     }
 
-    public record ProfileInput(String fullName, String phone) {}
+    public record ProfileInput(String fullName, String phone) {
+
+    }
 
     @PostMapping
     public ResponseEntity<Envelope<UserDto>> create(@RequestBody Input input,
