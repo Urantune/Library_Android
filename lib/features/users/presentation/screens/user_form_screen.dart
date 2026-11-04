@@ -6,8 +6,9 @@ import '../providers/user_provider.dart';
 
 class UserFormScreen extends ConsumerStatefulWidget {
   final User? user;
+  final bool profileOnly;
 
-  const UserFormScreen({super.key, this.user});
+  const UserFormScreen({super.key, this.user, this.profileOnly = false});
 
   @override
   ConsumerState<UserFormScreen> createState() => _UserFormScreenState();
@@ -19,10 +20,12 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   late TextEditingController _emailController;
   late TextEditingController _fullNameController;
   late TextEditingController _phoneController;
+  late TextEditingController _passwordController;
   String _selectedRole = 'USER';
   bool _isSubmitting = false;
 
   bool get isEditing => widget.user != null;
+  bool get profileOnly => widget.profileOnly;
 
   @override
   void initState() {
@@ -33,6 +36,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _fullNameController =
         TextEditingController(text: widget.user?.fullName ?? '');
     _phoneController = TextEditingController(text: widget.user?.phone ?? '');
+    _passwordController = TextEditingController();
     _selectedRole = widget.user?.role ?? 'USER';
   }
 
@@ -42,6 +46,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _emailController.dispose();
     _fullNameController.dispose();
     _phoneController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -51,7 +56,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
         title: Text(
-          isEditing ? 'Sửa người dùng' : 'Thêm người dùng',
+          profileOnly ? 'Cập nhật hồ sơ' : isEditing ? 'Sửa người dùng' : 'Thêm người dùng',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
@@ -88,7 +93,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
+                      if (!profileOnly) TextFormField(
                         controller: _usernameController,
                         decoration: const InputDecoration(
                           labelText: 'Tên đăng nhập *',
@@ -105,8 +110,26 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                           return null;
                         },
                       ),
+                      if (!isEditing && !profileOnly) ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Mật khẩu *',
+                            prefixIcon: Icon(Icons.lock_outline),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.length < 8) {
+                              return 'Mật khẩu cần ít nhất 8 ký tự';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 16),
-                      TextFormField(
+                      if (!profileOnly) TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
@@ -125,7 +148,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
+                      if (!profileOnly) TextFormField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(
@@ -135,7 +158,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
+                      if (!profileOnly) DropdownButtonFormField<String>(
                         value: _selectedRole,
                         decoration: const InputDecoration(
                           labelText: 'Vai trò',
@@ -200,19 +223,28 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
         phone: _phoneController.text.trim().isEmpty
             ? null
             : _phoneController.text.trim(),
-        role: _selectedRole,
+        role: profileOnly ? widget.user!.role : _selectedRole,
         status: widget.user?.status ?? 'ACTIVE',
         createdAt: widget.user?.createdAt ?? now,
         updatedAt: now,
       );
 
-      if (isEditing) {
+      if (profileOnly) {
+        await ref.read(userRepositoryProvider).updateMe(user);
+        ref.invalidate(currentUserProvider);
+      } else if (isEditing) {
         await ref.read(userRepositoryProvider).updateUser(user);
       } else {
-        await ref.read(userRepositoryProvider).createUser(user);
+        await ref.read(userRepositoryProvider).createUser(
+              user,
+              password: _passwordController.text,
+            );
       }
 
       ref.invalidate(userListProvider);
+      if (isEditing && !profileOnly) {
+        ref.invalidate(userDetailProvider(user.id));
+      }
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(

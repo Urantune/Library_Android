@@ -28,7 +28,7 @@ class User {
       email: (json['email'] ?? '').toString(),
       fullName: (json['fullName'] ?? json['full_name'] ?? '').toString(),
       phone: json['phone']?.toString(),
-      role: (json['role'] ?? 'USER').toString(),
+      role: _normalizeRole((json['role'] ?? 'USER').toString()),
       status: (json['status'] ?? 'ACTIVE').toString(),
       createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['updatedAt'] ?? json['updated_at']),
@@ -74,5 +74,16 @@ class User {
       return null;
     }
     return DateTime.tryParse(value.toString());
+  }
+
+  static String _normalizeRole(String role) {
+    switch (role.toUpperCase()) {
+      case 'MEMBER':
+        return 'USER';
+      case 'LIBRARIAN':
+        return 'STAFF';
+      default:
+        return role.toUpperCase();
+    }
   }
 }

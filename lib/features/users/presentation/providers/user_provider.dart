@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/datasources/user_local_data_source.dart';
+import '../../data/datasources/user_remote_data_source.dart';
 import '../../data/repositories/user_repository_impl.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/user_repository.dart';
@@ -10,7 +11,14 @@ final userLocalDataSourceProvider = Provider<UserLocalDataSource>((ref) {
 });
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {
-  return UserRepositoryImpl(ref.watch(userLocalDataSourceProvider));
+  return UserRepositoryImpl(
+    ref.watch(userLocalDataSourceProvider),
+    remoteDataSource: UserRemoteDataSource(),
+  );
+});
+
+final currentUserProvider = FutureProvider<User>((ref) {
+  return ref.watch(userRepositoryProvider).getMe();
 });
 
 final userListProvider = FutureProvider<List<User>>((ref) {

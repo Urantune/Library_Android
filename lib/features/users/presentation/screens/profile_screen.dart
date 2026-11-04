@@ -10,7 +10,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(userDetailProvider('user-001'));
+    final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
@@ -35,7 +35,7 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () =>
-                      ref.invalidate(userDetailProvider('user-001')),
+                      ref.invalidate(currentUserProvider),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Thử lại'),
                 ),
@@ -190,7 +190,7 @@ class _ProfileContent extends ConsumerWidget {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => UserFormScreen(user: user),
+                    builder: (_) => UserFormScreen(user: user, profileOnly: true),
                   ),
                 );
               },
