@@ -140,7 +140,7 @@ class PublisherService {
   // GET: CHI TIẾT NHÀ XUẤT BẢN
   // =========================================================
 
-  Future<Publisher> getPublisherById(int id) async {
+  Future<Publisher> getPublisherById(String id) async {
     try {
       final response = await _dio.get(
         '/api/publishers/$id',
@@ -176,7 +176,7 @@ class PublisherService {
   // =========================================================
 
   Future<Publisher> updatePublisher(
-    int id,
+    String id,
     Map<String, dynamic> data,
   ) async {
     try {
@@ -195,7 +195,7 @@ class PublisherService {
   // DELETE: XÓA NHÀ XUẤT BẢN
   // =========================================================
 
-  Future<void> deletePublisher(int id) async {
+  Future<void> deletePublisher(String id) async {
     try {
       await _dio.delete(
         '/api/publishers/$id',

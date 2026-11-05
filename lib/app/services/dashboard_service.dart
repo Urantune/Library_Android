@@ -19,7 +19,7 @@ class DashboardService {
 
   Future<BooksOverview> fetchBooksOverview({int limit = 5}) async {
     final response = await _dio.get<dynamic>(
-      '/catalog/api/books',
+      '/api/books',
       queryParameters: {'page': 0, 'size': limit},
     );
     final data = _unwrap(response.data);
@@ -30,12 +30,12 @@ class DashboardService {
     return BooksOverview(total: _totalOf(data) ?? books.length, items: books);
   }
 
-  Future<int> countAuthors() => _count('/catalog/api/authors');
+  Future<int> countAuthors() => _count('/api/authors');
 
   Future<int> countCategories() =>
-      _count('/catalog/api/categories', const {'status': 'ACTIVE'});
+      _count('/api/categories', const {'status': 'ACTIVE'});
 
-  Future<int> countPublishers() => _count('/catalog/api/publishers');
+  Future<int> countPublishers() => _count('/api/publishers');
 
   Future<int> _count(
     String path, [

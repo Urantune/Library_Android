@@ -4,7 +4,7 @@ import '../models/publisher.dart';
 import '../services/publisher_service.dart';
 
 class PublisherDetailScreen extends StatefulWidget {
-  final int publisherId;
+  final String publisherId;
 
   const PublisherDetailScreen({
     super.key,

@@ -1,12 +1,15 @@
 import 'package:dio/dio.dart';
+import '../../../../core/config/api_config.dart';
+import '../../../../core/network/api_client.dart';
 import '../models/author_response.dart';
 
 class AuthorRemoteDataSource {
   final Dio dio;
   final String baseUrl;
 
-  AuthorRemoteDataSource({Dio? dio, this.baseUrl = 'http://localhost:8082'})
-      : dio = dio ?? Dio();
+  AuthorRemoteDataSource({Dio? dio, String? baseUrl})
+      : baseUrl = baseUrl ?? ApiConfig.baseUrl,
+        dio = dio ?? ApiClient.dio;
 
   Future<PageDTO<AuthorResponse>> fetchAuthors(
       {int page = 0, int size = 20}) async {

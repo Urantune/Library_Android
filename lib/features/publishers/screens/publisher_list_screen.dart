@@ -40,7 +40,7 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
   }
 
   // Mở màn hình chi tiết
-  void openDetail(int id) {
+  void openDetail(String id) {
     Navigator.push(
       context,
       MaterialPageRoute(

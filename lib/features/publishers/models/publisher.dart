@@ -1,5 +1,5 @@
 class Publisher {
-  final int id;
+  final String id;
   final String name;
   final String address;
   final String phone;
@@ -15,17 +15,14 @@ class Publisher {
 
   factory Publisher.fromJson(Map<String, dynamic> json) {
     final rawId = json['id'];
-    final parsedId =
-        rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
-
-    if (parsedId == null) {
+    if (rawId == null || rawId.toString().trim().isEmpty) {
       throw const FormatException(
         'Dữ liệu nhà xuất bản không có ID hợp lệ.',
       );
     }
 
     return Publisher(
-      id: parsedId,
+      id: rawId.toString(),
       name: json['name']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
