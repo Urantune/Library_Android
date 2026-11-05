@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 
-import '../../features/authors/data/datasources/author_remote_data_source.dart';
 import '../../features/books/data/dto/book_dto.dart';
 import '../../features/books/domain/entities/book.dart';
 
@@ -14,16 +13,13 @@ class BooksOverview {
 class DashboardService {
   DashboardService({
     required Dio dio,
-    required AuthorRemoteDataSource authors,
-  })  : _dio = dio,
-        _authors = authors;
+  }) : _dio = dio;
 
   final Dio _dio;
-  final AuthorRemoteDataSource _authors;
 
   Future<BooksOverview> fetchBooksOverview({int limit = 5}) async {
     final response = await _dio.get<dynamic>(
-      '/api/books',
+      '/catalog/api/books',
       queryParameters: {'page': 0, 'size': limit},
     );
     final data = _unwrap(response.data);
@@ -34,15 +30,12 @@ class DashboardService {
     return BooksOverview(total: _totalOf(data) ?? books.length, items: books);
   }
 
-  Future<int> countAuthors() async {
-    final page = await _authors.fetchAuthors(page: 0, size: 1);
-    return page.totalElements;
-  }
+  Future<int> countAuthors() => _count('/catalog/api/authors');
 
   Future<int> countCategories() =>
-      _count('/api/categories', const {'status': 'ACTIVE'});
+      _count('/catalog/api/categories', const {'status': 'ACTIVE'});
 
-  Future<int> countPublishers() => _count('/api/publishers');
+  Future<int> countPublishers() => _count('/catalog/api/publishers');
 
   Future<int> _count(
     String path, [

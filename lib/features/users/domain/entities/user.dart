@@ -28,7 +28,9 @@ class User {
       email: (json['email'] ?? '').toString(),
       fullName: (json['fullName'] ?? json['full_name'] ?? '').toString(),
       phone: json['phone']?.toString(),
-      role: _normalizeRole((json['role'] ?? 'USER').toString()),
+      role: _normalizeRole(
+        (json['role'] ?? _firstRole(json['roles']) ?? 'USER').toString(),
+      ),
       status: (json['status'] ?? 'ACTIVE').toString(),
       createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
       updatedAt: _parseDate(json['updatedAt'] ?? json['updated_at']),
@@ -86,4 +88,7 @@ class User {
         return role.toUpperCase();
     }
   }
+
+  static String? _firstRole(dynamic roles) =>
+      roles is List && roles.isNotEmpty ? roles.first.toString() : null;
 }

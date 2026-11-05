@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_client.dart';
-import '../../features/authors/data/datasources/author_remote_data_source.dart';
 import '../../features/sign/controllers/auth_controller.dart';
 import '../../features/sign/services/auth_service.dart';
 import '../services/dashboard_service.dart';
@@ -12,7 +11,6 @@ enum CountMetric { authors, categories, publishers }
 final dashboardServiceProvider = Provider<DashboardService>((ref) {
   return DashboardService(
     dio: ApiClient.dio,
-    authors: AuthorRemoteDataSource(dio: ApiClient.dio),
   );
 });
 

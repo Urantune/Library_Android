@@ -1,9 +1,12 @@
+import '../../../../core/config/api_config.dart';
+
 /// Cấu hình chế độ dữ liệu cho module users.
-/// - DATA_MODE = 'demo' (mặc định): đọc từ JSON + SharedPreferences (không cần backend).
-/// - DATA_MODE = 'api': gọi REST API thật qua ApiClient (cần backend mss chạy).
+/// - DATA_MODE = 'api' (mặc định): đọc từ backend qua Gateway.
+/// - DATA_MODE = 'demo': đọc từ JSON + SharedPreferences.
 class UserConfig {
-  static const String dataMode = String.fromEnvironment('DATA_MODE', defaultValue: 'demo');
-  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8080');
+  static const String dataMode =
+      String.fromEnvironment('DATA_MODE', defaultValue: 'api');
+  static String get apiBaseUrl => ApiConfig.baseUrl;
 
   static bool get useRemote => dataMode.toLowerCase() == 'api';
 }
