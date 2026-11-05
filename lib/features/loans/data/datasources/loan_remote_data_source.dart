@@ -47,7 +47,7 @@ class LoanRemoteDataSource {
     }
     final result = body['result'] ?? body['data'] ?? body;
     if (result is! Map) {
-      throw const FormatException('Dữ liệu loans trong phản hồi không hợp lệ.');
+      throw const FormatException('Dữ liệu loan trong phản hồi không hợp lệ.');
     }
     return Map<String, dynamic>.from(result);
   }

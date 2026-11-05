@@ -69,7 +69,6 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
       ..sort((a, b) =>
           (b.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
               .compareTo(a.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
-
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(borrowedLoansProvider(userId));

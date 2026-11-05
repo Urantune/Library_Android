@@ -15,7 +15,6 @@ final loanCurrentUserIdProvider = FutureProvider<String>((ref) async {
   }
   return user.id;
 });
-
 final loanRemoteDataSourceProvider = Provider<LoanRemoteDataSource>((ref) {
   return LoanRemoteDataSource();
 });

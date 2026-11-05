@@ -75,7 +75,7 @@ class PageDTO<T> {
   factory PageDTO.fromJson(
     Map<String, dynamic> json,
     T Function(dynamic) fromJsonT,
-  ) {
+  ){
     return PageDTO<T>(
       size: (json['size'] as num?)?.toInt() ?? 0,
       page: (json['page'] as num?)?.toInt() ?? 0,
