@@ -7,6 +7,7 @@ x-app: &app
     EUREKA_URL: http://discovery-service:8761/eureka/
     REDIS_HOST: redis
     REDIS_PORT: 6379
+    REDIS_HEALTH_ENABLED: "true"
     KAFKA_BOOTSTRAP_SERVERS: kafka:19092
   healthcheck: &app-health
     test: ["CMD-SHELL", "curl -fsS http://localhost:$${SERVER_PORT}/actuator/health/readiness || exit 1"]
