@@ -10,6 +10,7 @@ class Book {
     required this.quantity,
     required this.available,
     this.description = '',
+    this.status = 'ACTIVE',
   });
 
   final String id;
@@ -22,6 +23,7 @@ class Book {
   final int quantity;
   final int available;
   final String description;
+  final String status;
 
   factory Book.fromJson(Map<String, dynamic> json) => Book(
         id: '${json['id'] ?? ''}',
@@ -34,6 +36,7 @@ class Book {
         quantity: (json['quantity'] as num?)?.toInt() ?? 0,
         available: (json['available'] as num?)?.toInt() ?? 0,
         description: '${json['description'] ?? ''}',
+        status: '${json['status'] ?? 'ACTIVE'}',
       );
 
   Map<String, dynamic> toJson() => {
@@ -47,6 +50,7 @@ class Book {
         'quantity': quantity,
         'available': available,
         'description': description,
+        'status': status,
       };
 
   Book copyWith({
@@ -59,6 +63,7 @@ class Book {
     int? quantity,
     int? available,
     String? description,
+    String? status,
   }) =>
       Book(
         id: id,
@@ -71,5 +76,6 @@ class Book {
         quantity: quantity ?? this.quantity,
         available: available ?? this.available,
         description: description ?? this.description,
+        status: status ?? this.status,
       );
 }

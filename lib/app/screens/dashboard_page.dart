@@ -6,7 +6,7 @@ import '../../features/bottom_nav/bottom_nav_bar.dart';
 import '../../features/books/presentation/screens/book_list_screen.dart';
 import '../../features/categories/screens/category_screen.dart';
 import '../../features/notifications/presentation/screens/notification_list_screen.dart';
-import '../../features/loans/presentation/screens/loan_history_screen.dart';
+import '../../features/loans/presentation/screens/borrowed_loans_screen.dart';
 import '../../features/publishers/screens/publisher_list_screen.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
 import '../../features/users/presentation/screens/user_list_screen.dart';
@@ -50,7 +50,7 @@ class DashboardPage extends StatelessWidget {
       case NavIndex.user:
         return const UserListScreen();
       case NavIndex.loan:
-        return const LoanHistoryScreen();
+        return const BorrowedLoansScreen();
       case NavIndex.notification:
         return const NotificationListScreen();
       default:

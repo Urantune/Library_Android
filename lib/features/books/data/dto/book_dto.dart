@@ -28,6 +28,7 @@ class BookDto {
       quantity: number(json['totalCopies']),
       available: number(json['availableCopies']),
       description: json['description']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'ACTIVE',
     );
   }
 }
