@@ -33,9 +33,9 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
     private final String audience;
 
     public UserJwtRbacFilter(ObjectMapper mapper,
-                             @Value("${security.jwt.public-key:}") Resource publicKeyResource,
-                             @Value("${security.jwt.issuer:}") String issuer,
-                             @Value("${security.jwt.audience:}") String audience) {
+            @Value("${security.jwt.public-key:file:../data/auth-keys/public.pem}") Resource publicKeyResource,
+            @Value("${security.jwt.issuer:library-identity}") String issuer,
+            @Value("${security.jwt.audience:library-api}") String audience) {
         this.mapper = mapper;
         this.publicKeyResource = publicKeyResource;
         this.issuer = issuer;
