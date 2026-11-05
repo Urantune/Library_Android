@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
@@ -43,11 +44,11 @@ public class LoansController {
     @GetMapping("/users/{userId}/borrowed")
     public ResponseEntity<ResponseAPI<PageDTO<LoanResponseDTO>>> getBorrowedLoans(
             @PathVariable String userId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        if (page < 0 || size < 1 || size > 100) {
-            throw new AppException(ErrorCode.BAD_REQUEST);
-        }
+        verifyOwner(userId, currentUserId);
+        validatePage(page, size);
         PageDTO<LoanResponseDTO> result = loansService.getBorrowedLoans(userId, page, size);
         return ResponseEntity.ok(
                 ResponseAPI.<PageDTO<LoanResponseDTO>>builder()
@@ -55,5 +56,34 @@ public class LoansController {
                         .timestamp(Instant.now().toString())
                         .result(result)
                         .build());
+    }
+
+    @GetMapping("/users/{userId}/history")
+    public ResponseEntity<ResponseAPI<PageDTO<LoanResponseDTO>>> getLoanHistory(
+            @PathVariable String userId,
+            @RequestHeader("X-User-Id") String currentUserId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        verifyOwner(userId, currentUserId);
+        validatePage(page, size);
+        PageDTO<LoanResponseDTO> result = loansService.getLoanHistory(userId, page, size);
+        return ResponseEntity.ok(
+                ResponseAPI.<PageDTO<LoanResponseDTO>>builder()
+                        .message("Loan history")
+                        .timestamp(Instant.now().toString())
+                        .result(result)
+                        .build());
+    }
+
+    private void verifyOwner(String userId, String currentUserId) {
+        if (!userId.equals(currentUserId)) {
+            throw new AppException(ErrorCode.LOAN_ACCESS_DENIED);
+        }
+    }
+
+    private void validatePage(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new AppException(ErrorCode.BAD_REQUEST);
+        }
     }
 }

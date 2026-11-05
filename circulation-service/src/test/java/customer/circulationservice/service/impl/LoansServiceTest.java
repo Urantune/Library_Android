@@ -45,7 +45,7 @@ class LoansServiceTest {
                 .userId(USER_ID)
                 .items(List.of(LoanItemRequestDTO.builder().bookId(BOOK_ID).build()))
                 .build();
-        when(loansClient.getCurrentUser()).thenReturn(new UserDto.Envelope<>(
+        when(loansClient.get(USER_ID)).thenReturn(new UserDto.Envelope<>(
                 "success", "ok", user(USER_ID, "ACTIVE"), null, null));
         when(loansMapper.toEntity(request)).thenReturn(new Loans());
         when(loansRepository.save(any(Loans.class))).thenAnswer(invocation -> invocation.getArgument(0));

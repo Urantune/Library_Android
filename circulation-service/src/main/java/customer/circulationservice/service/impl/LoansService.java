@@ -84,6 +84,26 @@ public class LoansService implements ILoansService {
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageDTO<LoanResponseDTO> getLoanHistory(String userId, int page, int size) {
+        Page<Loans> loans = loansRepository.findByUserIdOrderByRequestedAtDesc(
+                userId, PageRequest.of(page, size));
+        List<LoanResponseDTO> content = loans.getContent().stream()
+                .map(this::toResponseWithAllItems)
+                .toList();
+
+        return PageDTO.<LoanResponseDTO>builder()
+                .size(loans.getSize())
+                .page(loans.getNumber())
+                .totalPages(loans.getTotalPages())
+                .totalElements(loans.getTotalElements())
+                .first(loans.isFirst())
+                .last(loans.isLast())
+                .content(content)
+                .build();
+    }
+
     private UserDto getActiveUser(String userId) {
         final UserDto user;
 
@@ -148,6 +168,10 @@ public class LoansService implements ILoansService {
                 .filter(item -> "BORROWED".equals(item.getItemStatus()))
                 .toList();
         return toResponse(loan, borrowedItems);
+    }
+
+    private LoanResponseDTO toResponseWithAllItems(Loans loan) {
+        return toResponse(loan, loanItemsRepository.findByLoanIdOrderByIdAsc(loan.getId()));
     }
 
     private LoanResponseDTO toResponse(Loans loan, List<LoanItems> items) {

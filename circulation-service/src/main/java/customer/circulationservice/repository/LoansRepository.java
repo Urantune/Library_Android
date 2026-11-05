@@ -11,4 +11,6 @@ import org.springframework.stereotype.Repository;
 public interface LoansRepository extends JpaRepository<Loans, String> {
     Page<Loans> findByUserIdAndStatusInOrderByBorrowedAtDesc(
             String userId, Collection<String> statuses, Pageable pageable);
+
+    Page<Loans> findByUserIdOrderByRequestedAtDesc(String userId, Pageable pageable);
 }

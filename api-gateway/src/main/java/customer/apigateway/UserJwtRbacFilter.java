@@ -46,7 +46,10 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getRawPath();
-        if (!(path.startsWith("/api/users") || path.startsWith("/identity/api/users"))) return chain.filter(exchange);
+        boolean identityPath = path.startsWith("/api/users") || path.startsWith("/identity/api/users");
+        boolean circulationPath = path.matches(
+                "^/(?:circulation|api/circulation)/api/(?:loans(?:/users/[^/]+/(?:borrowed|history))?|loan-renewals)$");
+        if (!identityPath && !circulationPath) return chain.filter(exchange);
 
         String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         Claims claims;
@@ -58,13 +61,27 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
         }
 
         String method = request.getMethod().name();
-        boolean profileOperation = path.endsWith("/users/me")
-                && List.of("GET", "PUT").contains(method);
-        boolean adminOperation = claims.roles().contains("ADMIN")
-                && ((path.endsWith("/users") && List.of("GET", "POST").contains(method))
-                || (path.matches(".*/users/[^/]+(/status)?$")
-                && List.of("GET", "PUT", "PATCH", "DELETE").contains(method)));
-        if (!profileOperation && !adminOperation) {
+        boolean allowedOperation;
+        if (identityPath) {
+            boolean profileOperation = path.endsWith("/users/me")
+                    && List.of("GET", "PUT").contains(method);
+            boolean adminOperation = claims.roles().contains("ADMIN")
+                    && ((path.endsWith("/users") && List.of("GET", "POST").contains(method))
+                    || (path.matches(".*/users/[^/]+(/status)?$")
+                    && List.of("GET", "PUT", "PATCH", "DELETE").contains(method)));
+            allowedOperation = profileOperation || adminOperation;
+        } else {
+            boolean loanRead = path.matches(
+                    "^/(?:circulation|api/circulation)/api/loans/users/[^/]+/(?:borrowed|history)$")
+                    && method.equals("GET");
+            boolean loanRequest = path.matches("^/(?:circulation|api/circulation)/api/loans$")
+                    && method.equals("POST");
+            boolean renewalRequest = path.matches(
+                    "^/(?:circulation|api/circulation)/api/loan-renewals$")
+                    && method.equals("POST");
+            allowedOperation = !claims.roles().isEmpty() && (loanRead || loanRequest || renewalRequest);
+        }
+        if (!allowedOperation) {
             exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
             return exchange.getResponse().setComplete();
         }
