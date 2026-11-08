@@ -20,6 +20,7 @@ class LoanRemoteDataSource {
     final response = await _dio.get(
       '/api/loans/users/${Uri.encodeComponent(userId)}/borrowed',
       queryParameters: {'page': page, 'size': size},
+      options: Options(headers: {'X-User-Id': userId}),
     );
     final result = _extractResult(response.data);
     return PageDTO<LoanResponseDTO>.fromJson(
@@ -37,6 +38,7 @@ class LoanRemoteDataSource {
       '/api/loans',
       data: {'userId': userId, 'items': items},
       cancelToken: cancelToken,
+      options: Options(headers: {'X-User-Id': userId}),
     );
     return LoanResponseDTO.fromJson(_extractResult(response.data));
   }

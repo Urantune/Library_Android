@@ -51,7 +51,10 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
         data: (userId) => ref.watch(borrowedLoansProvider(userId)).when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => _ErrorView(
-            message: error.toString(),
+            message: _loanRequestErrorMessage(
+              error,
+              action: 'tải danh sách mượn',
+            ),
             onRetry: () => ref.invalidate(borrowedLoansProvider(userId)),
           ),
           data: (page) => _buildLoanList(userId, page),
@@ -69,6 +72,14 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
       ..sort((a, b) =>
           (b.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
               .compareTo(a.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
+    final borrowedLoans = loans
+        .where((loan) => loan.status.toUpperCase() == 'BORROWED')
+        .toList();
+    final borrowedBookCount = borrowedLoans.fold<int>(
+      0,
+      (count, loan) => count + loan.items.length,
+    );
+
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(borrowedLoansProvider(userId));
@@ -122,6 +133,39 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
             ),
           ),
           const SizedBox(height: 10),
+          Text(
+            'Sách đang mượn ($borrowedBookCount)',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF25364A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (borrowedBookCount == 0)
+            const Text(
+              'Chưa có sách ở trạng thái BORROWED.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF667085)),
+            )
+          else
+            for (final loan in borrowedLoans)
+              for (var index = 0; index < loan.items.length; index++)
+                _BorrowedBookTile(
+                  item: loan.items[index],
+                  index: index,
+                  loanId: loan.id,
+                  dueAt: loan.dueAt,
+                ),
+          const SizedBox(height: 18),
+          const Text(
+            'Phiếu mượn',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF25364A),
+            ),
+          ),
+          const SizedBox(height: 8),
           if (loans.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 48),
@@ -244,6 +288,53 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
   }
 }
 
+class _BorrowedBookTile extends StatelessWidget {
+  const _BorrowedBookTile({
+    required this.item,
+    required this.index,
+    required this.loanId,
+    required this.dueAt,
+  });
+
+  final Map<String, dynamic> item;
+  final int index;
+  final String loanId;
+  final DateTime? dueAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final nestedBook = item['book'];
+    final title = item['bookTitle'] ??
+        item['bookName'] ??
+        item['title'] ??
+        (nestedBook is Map ? nestedBook['title'] : null);
+    final bookId = item['bookId'] ?? item['id'];
+    final displayTitle = title?.toString().trim();
+    final heading = displayTitle != null && displayTitle.isNotEmpty
+        ? displayTitle
+        : bookId != null
+            ? 'Sách mã $bookId'
+            : 'Sách ${index + 1}';
+    final copyId = item['copyId'] ?? item['copyCode'];
+    final dueDate = dueAt == null
+        ? null
+        : '${dueAt!.day.toString().padLeft(2, '0')}/'
+            '${dueAt!.month.toString().padLeft(2, '0')}/${dueAt!.year}';
+
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.menu_book_outlined, color: Color(0xFF1876D2)),
+      title: Text(heading, maxLines: 2, overflow: TextOverflow.ellipsis),
+      subtitle: Text([
+        if (copyId != null) 'Bản sao $copyId',
+        if (dueDate != null) 'Hạn trả $dueDate',
+        'Phiếu $loanId',
+      ].join(' · ')),
+    );
+  }
+}
+
 String _loanRequestErrorMessage(Object error, {required String action}) {
   if (error is TimeoutException) {
     return 'Không thể $action: ${error.message}';
@@ -312,6 +403,13 @@ class _LoanCard extends StatelessWidget {
             '${loan.items.length} đầu sách  ·  Đã gia hạn ${loan.renewCount} lần',
             style: const TextStyle(fontSize: 12, color: Color(0xFF667085)),
           ),
+          if (loan.items.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            for (var index = 0; index < loan.items.length; index++)
+              _LoanItemTile(item: loan.items[index], index: index),
+          ],
           if (loan.rejectionReason?.isNotEmpty == true) ...[
             const SizedBox(height: 8),
             Text(
@@ -319,6 +417,65 @@ class _LoanCard extends StatelessWidget {
               style: const TextStyle(fontSize: 12, color: Colors.redAccent),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LoanItemTile extends StatelessWidget {
+  const _LoanItemTile({required this.item, required this.index});
+
+  final Map<String, dynamic> item;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final nestedBook = item['book'];
+    final title = item['bookTitle'] ??
+        item['bookName'] ??
+        item['title'] ??
+        (nestedBook is Map ? nestedBook['title'] : null);
+    final bookId = item['bookId'] ?? item['id'];
+    final displayTitle = title?.toString().trim();
+    final heading = displayTitle != null && displayTitle.isNotEmpty
+        ? displayTitle
+        : bookId != null
+            ? 'Sách mã $bookId'
+            : 'Sách ${index + 1}';
+    final copyId = item['copyId'] ?? item['copyCode'];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.menu_book_outlined,
+              size: 17, color: Color(0xFF667085)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  heading,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF344054),
+                  ),
+                ),
+                if (copyId != null)
+                  Text(
+                    'Mã bản sao: $copyId',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF667085),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );

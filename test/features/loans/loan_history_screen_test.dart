@@ -112,9 +112,10 @@ void main() {
     await openScreen(tester);
 
     expect(find.text('2 phiếu mượn'), findsOneWidget);
-    expect(find.text('Phiếu loan-1'), findsOneWidget);
+    expect(find.text('Phiếu loan-1'), findsWidgets);
     expect(find.text('BORROWED'), findsOneWidget);
     expect(find.text('2 đầu sách  ·  Đã gia hạn 1 lần'), findsOneWidget);
+    expect(find.text('Sách mã book-1'), findsWidgets);
   });
 
   testWidgets('filters borrowed loans by ID or status', (tester) async {

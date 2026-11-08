@@ -30,6 +30,7 @@ void main() {
     when(() => dio.get<dynamic>(
           any(),
           queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
         )).thenAnswer((_) async => _response(
           '/api/loans/users/user-1/borrowed',
           {
@@ -65,16 +66,19 @@ void main() {
     expect(page.content.single.status, 'BORROWED');
     expect(page.content.single.dueAt, DateTime(2026, 11, 7, 10));
     expect(page.content.single.items.single['bookId'], 'book-1');
-    verify(() => dio.get<dynamic>(
+    final options = verify(() => dio.get<dynamic>(
           '/api/loans/users/user-1/borrowed',
           queryParameters: {'page': 0, 'size': 20},
-        )).called(1);
+          options: captureAny(named: 'options'),
+        )).captured.single as Options;
+    expect(options.headers?['X-User-Id'], 'user-1');
   });
 
   test('posts the loan request with user ID and item payload', () async {
     when(() => dio.post<dynamic>(
           any(),
           data: any(named: 'data'),
+          options: any(named: 'options'),
         )).thenAnswer((_) async => _response('/api/loans', {
           'message': 'Loan request submitted',
           'result': {
@@ -95,7 +99,7 @@ void main() {
 
     expect(loan.id, 'loan-2');
     expect(loan.status, 'REQUESTED');
-    verify(() => dio.post<dynamic>(
+    final options = verify(() => dio.post<dynamic>(
           '/api/loans',
           data: {
             'userId': 'user-1',
@@ -103,6 +107,8 @@ void main() {
               {'bookId': 'book-1', 'copyId': 'copy-1'},
             ],
           },
-        )).called(1);
+          options: captureAny(named: 'options'),
+        )).captured.single as Options;
+    expect(options.headers?['X-User-Id'], 'user-1');
   });
 }
