@@ -18,7 +18,9 @@ import customer.circulationservice.service.ILoansService;
 import feign.FeignException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
@@ -67,10 +69,17 @@ public class LoansService implements ILoansService {
     @Override
     @Transactional(readOnly = true)
     public PageDTO<LoanResponseDTO> getBorrowedLoans(String userId, int page, int size) {
-        Page<Loans> loans = loansRepository.findByUserIdAndStatusInOrderByBorrowedAtDesc(
-                userId, List.of("BORROWED", "OVERDUE"), PageRequest.of(page, size));
+        Page<Loans> loans = loansRepository.findBorrowedLoans(
+                userId, List.of("BORROWED", "OVERDUE"), "BORROWED", PageRequest.of(page, size));
+        List<String> loanIds = loans.getContent().stream()
+                .map(Loans::getId)
+                .toList();
+        Map<String, List<LoanItems>> itemsByLoanId = loanIds.isEmpty()
+                ? Map.of()
+                : loanItemsRepository.findByLoanIdInAndItemStatusOrderByIdAsc(loanIds, "BORROWED").stream()
+                        .collect(Collectors.groupingBy(LoanItems::getLoanId));
         List<LoanResponseDTO> content = loans.getContent().stream()
-                .map(this::toResponseWithItems)
+                .map(loan -> toResponse(loan, itemsByLoanId.getOrDefault(loan.getId(), List.of())))
                 .toList();
 
         return PageDTO.<LoanResponseDTO>builder()
@@ -160,14 +169,6 @@ public class LoansService implements ILoansService {
         item.setItemStatus("REQUESTED");
         item.setFineAmount(0.0);
         return item;
-    }
-
-    private LoanResponseDTO toResponseWithItems(Loans loan) {
-        List<LoanItems> borrowedItems = loanItemsRepository.findByLoanIdOrderByIdAsc(loan.getId())
-                .stream()
-                .filter(item -> "BORROWED".equals(item.getItemStatus()))
-                .toList();
-        return toResponse(loan, borrowedItems);
     }
 
     private LoanResponseDTO toResponseWithAllItems(Loans loan) {

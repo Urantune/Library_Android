@@ -29,18 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class LoansController {
     ILoansService loansService;
 
-    @PostMapping
-    public ResponseEntity<ResponseAPI<LoanResponseDTO>> requestLoan(
-            @Valid @RequestBody LoanRequestDTO request) {
-        LoanResponseDTO result = loansService.requestLoan(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                ResponseAPI.<LoanResponseDTO>builder()
-                        .message("Loan request submitted")
-                        .timestamp(Instant.now().toString())
-                        .result(result)
-                        .build());
-    }
-
     @GetMapping("/users/{userId}/borrowed")
     public ResponseEntity<ResponseAPI<PageDTO<LoanResponseDTO>>> getBorrowedLoans(
             @PathVariable String userId,
@@ -53,6 +41,18 @@ public class LoansController {
         return ResponseEntity.ok(
                 ResponseAPI.<PageDTO<LoanResponseDTO>>builder()
                         .message("Current borrowed books")
+                        .timestamp(Instant.now().toString())
+                        .result(result)
+                        .build());
+    }
+
+    @PostMapping
+    public ResponseEntity<ResponseAPI<LoanResponseDTO>> requestLoan(
+            @Valid @RequestBody LoanRequestDTO request) {
+        LoanResponseDTO result = loansService.requestLoan(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ResponseAPI.<LoanResponseDTO>builder()
+                        .message("Loan request submitted")
                         .timestamp(Instant.now().toString())
                         .result(result)
                         .build());

@@ -86,12 +86,12 @@ class LoansServiceTest {
         loan.setUserId(USER_ID);
         loan.setStatus("BORROWED");
         LoanItems borrowedItem = item("item-1", "BORROWED");
-        LoanItems returnedItem = item("item-2", "RETURNED");
-        when(loansRepository.findByUserIdAndStatusInOrderByBorrowedAtDesc(
-                USER_ID, List.of("BORROWED", "OVERDUE"), PageRequest.of(0, 10)))
+        when(loansRepository.findBorrowedLoans(
+                USER_ID, List.of("BORROWED", "OVERDUE"), "BORROWED", PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(loan), PageRequest.of(0, 10), 1));
-        when(loanItemsRepository.findByLoanIdOrderByIdAsc("loan-1"))
-                .thenReturn(List.of(borrowedItem, returnedItem));
+        when(loanItemsRepository.findByLoanIdInAndItemStatusOrderByIdAsc(
+                List.of("loan-1"), "BORROWED"))
+                .thenReturn(List.of(borrowedItem));
         when(loansMapper.toResponse(loan)).thenReturn(
                 LoanResponseDTO.builder().id(loan.getId()).status(loan.getStatus()).build());
         when(loanItemsMapper.toResponse(borrowedItem)).thenReturn(
@@ -116,6 +116,7 @@ class LoansServiceTest {
     private LoanItems item(String id, String status) {
         LoanItems item = new LoanItems();
         item.setId(id);
+        item.setLoanId("loan-1");
         item.setBookId(BOOK_ID);
         item.setItemStatus(status);
         return item;

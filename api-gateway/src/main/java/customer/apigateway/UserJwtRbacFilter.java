@@ -49,7 +49,8 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
         boolean identityPath = path.startsWith("/api/users") || path.startsWith("/identity/api/users");
         boolean circulationPath = path.matches(
                 "^/(?:circulation|api/circulation)/api/(?:loans(?:/users/[^/]+/(?:borrowed|history))?|loan-renewals)$");
-        if (!identityPath && !circulationPath) return chain.filter(exchange);
+        boolean reservationPath = path.matches("^/(?:reservation|api/reservation)/api/reservations$");
+        if (!identityPath && !circulationPath && !reservationPath) return chain.filter(exchange);
 
         String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         Claims claims;
@@ -70,7 +71,7 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
                     || (path.matches(".*/users/[^/]+(/status)?$")
                     && List.of("GET", "PUT", "PATCH", "DELETE").contains(method)));
             allowedOperation = profileOperation || adminOperation;
-        } else {
+        } else if (circulationPath) {
             boolean loanRead = path.matches(
                     "^/(?:circulation|api/circulation)/api/loans/users/[^/]+/(?:borrowed|history)$")
                     && method.equals("GET");
@@ -80,6 +81,8 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
                     "^/(?:circulation|api/circulation)/api/loan-renewals$")
                     && method.equals("POST");
             allowedOperation = !claims.roles().isEmpty() && (loanRead || loanRequest || renewalRequest);
+        } else {
+            allowedOperation = !claims.roles().isEmpty() && method.equals("POST");
         }
         if (!allowedOperation) {
             exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);

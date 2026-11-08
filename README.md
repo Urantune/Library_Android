@@ -36,9 +36,10 @@ Start infrastructure with `docker compose up -d postgres redis kafka`, then star
 ./discovery-service/mvnw.cmd -pl api-gateway spring-boot:run
 ./discovery-service/mvnw.cmd -pl identity-service spring-boot:run
 ./discovery-service/mvnw.cmd -pl catalog-service spring-boot:run
+./discovery-service/mvnw.cmd -pl circulation-service spring-boot:run
 ```
 
-Circulation, reservation and notification use ports 8083, 8084 and 8085. Stateful services use their SQLite files under each service's `data/` directory. Redis and Kafka are optional for local startup unless the feature under test uses them. Configure their addresses with `REDIS_HOST`, `REDIS_PORT`, `KAFKA_BOOTSTRAP_SERVERS`, and set `EUREKA_URL` if Discovery is not at localhost:8761.
+Circulation, reservation and notification use ports 8083, 8084 and 8085. The local Circulation command above runs from the repository root and uses `data/circulation.db`; set `SPRING_DATASOURCE_URL` to override the datasource. Docker runs from `/app` and uses its separate `/app/data/circulation.db` volume. Redis and Kafka are optional for local startup unless the feature under test uses them. Configure their addresses with `REDIS_HOST`, `REDIS_PORT`, `KAFKA_BOOTSTRAP_SERVERS`, and set `EUREKA_URL` if Discovery is not at localhost:8761.
 
 ## Start with Docker Compose
 
