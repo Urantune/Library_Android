@@ -17,7 +17,10 @@ public enum ErrorCode {
     LOAN_NOT_FOUND(1008, "Loan not found", HttpStatus.NOT_FOUND),
     LOAN_ACCESS_DENIED(1009, "Loan does not belong to the current user", HttpStatus.FORBIDDEN),
     LOAN_NOT_RENEWABLE(1010, "Loan is not eligible for renewal", HttpStatus.CONFLICT),
-    RENEWAL_ALREADY_PENDING(1011, "A renewal request is already pending", HttpStatus.CONFLICT);
+    RENEWAL_ALREADY_PENDING(1011, "A renewal request is already pending", HttpStatus.CONFLICT),
+    ADMIN_ACCESS_DENIED(1012, "Administrator role is required", HttpStatus.FORBIDDEN),
+    LOAN_NOT_APPROVABLE(1013, "Loan is not in a state that can be approved", HttpStatus.CONFLICT),
+    LOAN_NOT_REJECTABLE(1014, "Loan is not in a state that can be rejected", HttpStatus.CONFLICT);
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
         this.code = code;

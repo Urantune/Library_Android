@@ -93,4 +93,20 @@ class GatewayRoutingTests {
         assertEquals(200, get("/actuator/prometheus", null).statusCode());
         assertEquals(404, get("/api/unknown/probe", null).statusCode());
     }
+
+    @Test
+    void requiresAuthenticationForAdminLoanList() throws Exception {
+        assertEquals(401, get("/api/circulation/api/loans/admin", null).statusCode());
+    }
+
+    @Test
+    void requiresAuthenticationForRequestedLoansAndAdminApproval() throws Exception {
+        assertEquals(401, get(
+                "/api/circulation/api/loans/users/user-1/requested", null).statusCode());
+        HttpRequest request = HttpRequest.newBuilder(URI.create(
+                        "http://localhost:" + port + "/api/circulation/api/loans/admin/loan-1/approve"))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        assertEquals(401, client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode());
+    }
 }
