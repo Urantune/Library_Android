@@ -5,6 +5,9 @@ import '../../../../core/network/api_client.dart';
 import '../../../books/data/datasources/book_remote_data_source.dart';
 import '../../../books/domain/entities/book.dart';
 import '../../../sign/controllers/auth_controller.dart';
+import '../../../sign/models/user.dart' as auth_user;
+import '../../../users/data/datasources/user_remote_data_source.dart';
+import '../../../users/domain/entities/user.dart' as user_entity;
 import '../../data/datasources/loan_remote_data_source.dart';
 import '../../data/models/loan_response.dart';
 
@@ -15,6 +18,11 @@ final loanCurrentUserIdProvider = FutureProvider<String>((ref) async {
   }
   return user.id;
 });
+
+final loanCurrentUserInfoProvider = Provider<auth_user.User?>((ref) {
+  return ref.watch(authControllerProvider.select((state) => state.user));
+});
+
 final loanRemoteDataSourceProvider = Provider<LoanRemoteDataSource>((ref) {
   return LoanRemoteDataSource();
 });
@@ -22,6 +30,16 @@ final loanRemoteDataSourceProvider = Provider<LoanRemoteDataSource>((ref) {
 final borrowedLoansProvider =
     FutureProvider.family<PageDTO<LoanResponseDTO>, String>((ref, userId) {
   return ref.watch(loanRemoteDataSourceProvider).getBorrowedLoans(userId);
+});
+
+final adminLoansProvider =
+    FutureProvider.family<PageDTO<LoanResponseDTO>, String>((ref, userRoles) {
+  return ref.watch(loanRemoteDataSourceProvider).getAllLoans(userRoles: userRoles);
+});
+
+final loanUserDetailsProvider =
+    FutureProvider.family<user_entity.User, String>((ref, userId) {
+  return UserRemoteDataSource().getUserById(userId);
 });
 
 final loanBookListProvider = FutureProvider<List<Book>>((ref) {

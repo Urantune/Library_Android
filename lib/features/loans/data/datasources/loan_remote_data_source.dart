@@ -29,6 +29,27 @@ class LoanRemoteDataSource {
     );
   }
 
+  Future<PageDTO<LoanResponseDTO>> getAllLoans({
+    String? userRoles,
+    int page = 0,
+    int size = 20,
+  }) async {
+    final headers = <String, dynamic>{};
+    if (userRoles != null && userRoles.isNotEmpty) {
+      headers['X-User-Roles'] = userRoles;
+    }
+    final response = await _dio.get(
+      '/api/loans/admin',
+      queryParameters: {'page': page, 'size': size},
+      options: Options(headers: headers.isNotEmpty ? headers : null),
+    );
+    final result = _extractResult(response.data);
+    return PageDTO<LoanResponseDTO>.fromJson(
+      result,
+      (json) => LoanResponseDTO.fromJson(Map<String, dynamic>.from(json as Map)),
+    );
+  }
+
   Future<LoanResponseDTO> requestLoan({
     required String userId,
     required List<Map<String, dynamic>> items,
@@ -39,6 +60,45 @@ class LoanRemoteDataSource {
       data: {'userId': userId, 'items': items},
       cancelToken: cancelToken,
       options: Options(headers: {'X-User-Id': userId}),
+    );
+    return LoanResponseDTO.fromJson(_extractResult(response.data));
+  }
+
+  Future<LoanResponseDTO> approveLoan({
+    required String loanId,
+    required String adminUserId,
+    required String userRoles,
+  }) async {
+    final response = await _dio.post(
+      '/api/loans/admin/${Uri.encodeComponent(loanId)}/approve',
+      options: Options(
+        headers: {
+          'X-User-Id': adminUserId,
+          'X-User-Roles': userRoles,
+        },
+      ),
+    );
+    return LoanResponseDTO.fromJson(_extractResult(response.data));
+  }
+
+  Future<LoanResponseDTO> rejectLoan({
+    required String loanId,
+    required String adminUserId,
+    required String userRoles,
+    String? reason,
+  }) async {
+    final data = reason != null && reason.trim().isNotEmpty
+        ? {'reason': reason.trim()}
+        : null;
+    final response = await _dio.post(
+      '/api/loans/admin/${Uri.encodeComponent(loanId)}/reject',
+      data: data,
+      options: Options(
+        headers: {
+          'X-User-Id': adminUserId,
+          'X-User-Roles': userRoles,
+        },
+      ),
     );
     return LoanResponseDTO.fromJson(_extractResult(response.data));
   }
