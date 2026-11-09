@@ -1,21 +1,31 @@
 import 'package:flutter/material.dart';
 
+import '../../core/auth/user_role.dart';
+
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
+  final UserRole role;
   final ValueChanged<int> onTap;
 
   const BottomNavBar({
     super.key,
     required this.currentIndex,
+    required this.role,
     required this.onTap,
   });
 
-  static const _items = [
-    _NavItem(Icons.home_rounded, 'Trang chủ'),
-    _NavItem(Icons.people_outline_rounded, 'Người dùng'),
-    _NavItem(Icons.notifications_none_rounded, 'Thông báo'),
-    _NavItem(Icons.person_outline_rounded, 'Hồ sơ'),
-  ];
+  List<_NavItem> get _items => [
+        const _NavItem(Icons.home_rounded, 'Trang chủ'),
+        // ADMIN: quản lý người dùng; thủ thư: mượn trả; thành viên: đã mượn.
+        if (role.canManageUsers)
+          const _NavItem(Icons.people_outline_rounded, 'Người dùng')
+        else if (role.canManageCatalog)
+          const _NavItem(Icons.swap_horiz_rounded, 'Mượn trả')
+        else
+          const _NavItem(Icons.history_rounded, 'Đã mượn'),
+        const _NavItem(Icons.notifications_none_rounded, 'Thông báo'),
+        const _NavItem(Icons.person_outline_rounded, 'Hồ sơ'),
+      ];
 
   @override
   Widget build(BuildContext context) {

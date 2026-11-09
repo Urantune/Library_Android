@@ -25,6 +25,10 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
   );
 });
 
+final currentUserProvider = FutureProvider<User>((ref) {
+  return ref.watch(userRepositoryProvider).getMe();
+});
+
 final userListProvider = FutureProvider<List<User>>((ref) {
   return ref.watch(userRepositoryProvider).getUsers();
 });

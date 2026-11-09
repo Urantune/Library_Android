@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/navigation_provider.dart';
 import '../services/dashboard_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_decorations.dart';
@@ -33,7 +35,9 @@ class PopularBooksSection extends StatelessWidget {
                 ),
               ),
               TextButton.icon(
-                onPressed: () {},
+                onPressed: () => context
+                    .read<NavigationProvider>()
+                    .selectMenu(NavIndex.book),
                 iconAlignment: IconAlignment.end,
                 icon: const Icon(Icons.chevron_right, size: 18),
                 label: const Text('Xem tất cả'),

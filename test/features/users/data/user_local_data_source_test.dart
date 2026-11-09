@@ -14,7 +14,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'users_data': '[]',
     });
-    repository = UserRepositoryImpl(UserLocalDataSource());
+    repository = UserRepositoryImpl(localDataSource: UserLocalDataSource());
   });
 
   group('UserRepository CRUD', () {

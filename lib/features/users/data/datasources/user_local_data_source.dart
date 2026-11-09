@@ -47,6 +47,22 @@ class UserLocalDataSource {
     await prefs.setString(_storageKey, jsonString);
   }
 
+  Future<User> getMe() async {
+    final users = await getUsers();
+    if (users.isEmpty) {
+      throw Exception('Chưa có hồ sơ người dùng.');
+    }
+    return users.firstWhere(
+      (user) => user.id == 'user-001',
+      orElse: () => users.first,
+    );
+  }
+
+  Future<User> updateMe(User user) async {
+    await updateUser(user);
+    return user;
+  }
+
   Future<User> getUserById(String id) async {
     final users = await getUsers();
 

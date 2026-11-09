@@ -31,8 +31,22 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<void> createUser(User user) async {
-    if (_isRemote) return _remoteDataSource!.createUser(user);
+  Future<User> getMe() async {
+    if (_isRemote) return _remoteDataSource!.getMe();
+    return _localDataSource.getMe();
+  }
+
+  @override
+  Future<User> updateMe(User user) async {
+    if (_isRemote) return _remoteDataSource!.updateMe(user);
+    return _localDataSource.updateMe(user);
+  }
+
+  @override
+  Future<void> createUser(User user, {String password = ''}) async {
+    if (_isRemote) {
+      return _remoteDataSource!.createUser(user, password: password);
+    }
     return _localDataSource.createUser(user);
   }
 

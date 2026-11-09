@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/auth/user_role.dart';
+import '../providers/navigation_provider.dart';
 import '../services/menu_service.dart';
 import '../theme/app_colors.dart';
 import 'sidebar_tile.dart';
@@ -8,15 +10,40 @@ import 'logout_dialog.dart';
 
 class Sidebar extends StatelessWidget {
   final int selectedIndex;
+  final UserRole role;
   final ValueChanged<int> onSelected;
   final VoidCallback onClose;
 
   const Sidebar({
     super.key,
     required this.selectedIndex,
+    required this.role,
     required this.onSelected,
     required this.onClose,
   });
+
+  /// Ẩn các mục không đúng quyền của role hiện tại.
+  /// Vẫn truyền đúng index gốc để không lệch điều hướng.
+  bool _showMainItem(int index) {
+    switch (index) {
+      case 2: // Tác giả
+      case 3: // Thể loại
+      case 4: // Nhà xuất bản
+        return role.canManageCatalog;
+      case 5: // Người dùng
+        return role.canManageUsers;
+      default:
+        return true;
+    }
+  }
+
+  /// Đổi nhãn thân thiện với bạn đọc, giữ nguyên index điều hướng.
+  MenuItem _displayItem(int index, MenuItem item) {
+    if (role.canManageCatalog) return item;
+    if (index == NavIndex.book) return MenuItem(item.icon, 'Thư viện');
+    if (index == NavIndex.loan) return MenuItem(item.icon, 'Sách đã mượn');
+    return item;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,27 +93,30 @@ class Sidebar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (int i = 0; i < mainItems.length; i++)
-                    SidebarTile(
-                      item: mainItems[i],
-                      selected: selectedIndex == i,
-                      onTap: () => onSelected(i),
-                    ),
+                    if (_showMainItem(i))
+                      SidebarTile(
+                        item: _displayItem(i, mainItems[i]),
+                        selected: selectedIndex == i,
+                        onTap: () => onSelected(i),
+                      ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Divider(color: Colors.white.withOpacity(0.12), height: 1),
-          ),
-          const SizedBox(height: 12),
-          for (int i = 0; i < bottomItems.length; i++)
-            SidebarTile(
-              item: bottomItems[i],
-              selected: selectedIndex == mainItems.length + i,
-              onTap: () => onSelected(mainItems.length + i),
+          if (role.canViewReports) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Divider(color: Colors.white.withOpacity(0.12), height: 1),
             ),
+            const SizedBox(height: 12),
+            for (int i = 0; i < bottomItems.length; i++)
+              SidebarTile(
+                item: bottomItems[i],
+                selected: selectedIndex == mainItems.length + i,
+                onTap: () => onSelected(mainItems.length + i),
+              ),
+          ],
           // Nút đăng xuất
           SidebarTile(
             item: const MenuItem(Icons.logout_rounded, 'Đăng xuất'),

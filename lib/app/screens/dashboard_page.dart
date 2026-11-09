@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/auth/user_role.dart';
 import '../../features/authors/presentation/screens/author_list_screen.dart';
 import '../../features/bottom_nav/bottom_nav_bar.dart';
 import '../../features/books/presentation/screens/book_list_screen.dart';
 import '../../features/categories/screens/category_screen.dart';
-import '../../features/notifications/presentation/screens/notification_list_screen.dart';
 import '../../features/loans/presentation/screens/loan_history_screen.dart';
+import '../../features/notifications/presentation/screens/notification_list_screen.dart';
 import '../../features/publishers/screens/publisher_list_screen.dart';
+import '../../features/sign/controllers/auth_controller.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
 import '../../features/users/presentation/screens/user_list_screen.dart';
 import '../providers/navigation_provider.dart';
@@ -16,32 +19,40 @@ import '../widgets/push_menu_layout.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/top_bar.dart';
 import 'dashboard_home.dart';
+import 'library_screen.dart';
+import 'my_loans_screen.dart';
 import 'placeholder_page.dart';
 
-/// Khung chính (điều hướng).
-class DashboardPage extends StatelessWidget {
+/// Khung chính (điều hướng) — menu và dashboard thay đổi theo vai trò.
+class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
-  Widget _buildBottomNavPage(int bottomNavIndex) {
+  Widget _buildBottomNavPage(int bottomNavIndex, UserRole role) {
     switch (bottomNavIndex) {
       case 1:
-        return const UserListScreen();
+        // ADMIN: quản lý người dùng. Thủ thư: quản lý mượn trả.
+        // Thành viên: sách đã mượn của tôi.
+        if (role.canManageUsers) return const UserListScreen();
+        if (role.canManageCatalog) return const LoanHistoryScreen();
+        return const MyLoansScreen();
       case 2:
         return const NotificationListScreen();
       case 3:
-        return const ProfileScreen(userId: 'user-001');
+        return const ProfileScreen();
       case 0:
       default:
         return const DashboardHome();
     }
   }
 
-  Widget _buildPage(NavigationProvider nav) {
+  Widget _buildPage(NavigationProvider nav, UserRole role) {
     switch (nav.selectedIndex) {
       case NavIndex.dashboard:
-        return _buildBottomNavPage(nav.bottomNavIndex);
+        return _buildBottomNavPage(nav.bottomNavIndex, role);
       case NavIndex.book:
-        return const BookListScreen();
+        return role.canManageCatalog
+            ? const BookListScreen()
+            : const LibraryScreen();
       case NavIndex.author:
         return const AuthorListScreen();
       case NavIndex.category:
@@ -49,9 +60,13 @@ class DashboardPage extends StatelessWidget {
       case NavIndex.publisher:
         return const PublisherListScreen();
       case NavIndex.user:
-        return const UserListScreen();
+        return role.canManageUsers
+            ? const UserListScreen()
+            : const MyLoansScreen();
       case NavIndex.loan:
-        return const LoanHistoryScreen();
+        return role.canManageCatalog
+            ? const LoanHistoryScreen()
+            : const MyLoansScreen();
       case NavIndex.notification:
         return const NotificationListScreen();
       default:
@@ -60,8 +75,11 @@ class DashboardPage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final nav = context.watch<NavigationProvider>();
+    final role = UserRole.fromRoles(
+      ref.watch(authControllerProvider).user?.roles ?? const ['MEMBER'],
+    );
     final showBottomNav = nav.showBottomNav;
 
     return Scaffold(
@@ -73,6 +91,7 @@ class DashboardPage extends StatelessWidget {
         menu: SafeArea(
           child: Sidebar(
             selectedIndex: nav.selectedIndex,
+            role: role,
             onSelected: nav.selectMenu, // chọn xong tự đóng menu
             onClose: nav.closeMenu,
           ),
@@ -89,7 +108,7 @@ class DashboardPage extends StatelessWidget {
                         ? 'bn${nav.bottomNavIndex}'
                         : 'sb${nav.selectedIndex}',
                   ),
-                  child: _buildPage(nav),
+                  child: _buildPage(nav, role),
                 ),
               ),
             ),
@@ -97,6 +116,7 @@ class DashboardPage extends StatelessWidget {
             if (showBottomNav)
               BottomNavBar(
                 currentIndex: nav.bottomNavIndex,
+                role: role,
                 onTap: nav.selectBottomNav,
               ),
           ],
