@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/publisher.dart';
 import '../services/publisher_service.dart';
+import 'publisher_add_screen.dart';
 
 /// Nguyen Duy Khang - CE192012
-/// Màn hình hiển thị chi tiết thông tin nhà xuất bản (PRM-023: Xem chi tiết theo ID)
+/// Màn hình hiển thị chi tiết thông tin nhà xuất bản (PRM-023: Xem chi tiết) và điều hướng cập nhật (PRM-025)
 class PublisherDetailScreen extends StatefulWidget {
   final String publisherId; // ID nhà xuất bản cần truy vấn chi tiết
 
@@ -18,7 +19,7 @@ class PublisherDetailScreen extends StatefulWidget {
 }
 
 /// Nguyen Duy Khang - CE192012
-/// State quản lý việc gọi API lấy thông tin chi tiết và hiển thị dữ liệu nhà xuất bản
+/// State quản lý việc gọi API lấy thông tin chi tiết và xử lý luồng cập nhật dữ liệu nhà xuất bản
 class _PublisherDetailScreenState extends State<PublisherDetailScreen> {
   // Service gọi API nhà xuất bản
   final PublisherService service = PublisherService();
@@ -42,6 +43,21 @@ class _PublisherDetailScreenState extends State<PublisherDetailScreen> {
         widget.publisherId,
       );
     });
+  }
+
+  /// PRM-025: Mở màn hình cập nhật thông tin nhà xuất bản và reload chi tiết khi sửa thành công
+  Future<void> openEdit(Publisher publisher) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PublisherAddScreen(publisher: publisher),
+      ),
+    );
+
+    if (updated == true && mounted) {
+      // Làm mới dữ liệu chi tiết sau khi cập nhật thành công (PRM-025)
+      refreshPublisher();
+    }
   }
 
   @override
@@ -166,6 +182,29 @@ class _PublisherDetailScreenState extends State<PublisherDetailScreen> {
                     buildInfo(
                       'Trạng thái',
                       publisher.status,
+                    ),
+                    const SizedBox(height: 15),
+                    // Nút điều hướng sang màn hình Cập nhật thông tin (PRM-025)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: FilledButton.icon(
+                        onPressed: () => openEdit(publisher),
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        label: const Text(
+                          'Cập nhật thông tin',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF0878F9),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),

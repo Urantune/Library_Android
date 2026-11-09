@@ -5,7 +5,7 @@ import '../models/publisher.dart';
 
 /// Nguyen Duy Khang - CE192012
 /// Service xử lý gọi API kết nối Backend cho chức năng Quản lý nhà xuất bản
-/// Phụ trách PRM-023 (Lấy danh sách, xem chi tiết) và PRM-024 (Tạo mới nhà xuất bản)
+/// Phụ trách PRM-023 (Lấy danh sách, xem chi tiết), PRM-024 (Tạo mới) và PRM-025 (Cập nhật thông tin nhà xuất bản)
 class PublisherService {
   // Dio client dùng chung của app (đã tích hợp TokenStorage và AuthInterceptor tự đính kèm JWT)
   final Dio _dio;
@@ -69,6 +69,11 @@ class PublisherService {
     // Xử lý mã lỗi trùng tên nhà xuất bản từ server trả về (409 Conflict)
     if (error.response?.statusCode == 409) {
       return 'Tên nhà xuất bản đã tồn tại trong hệ thống.';
+    }
+
+    // Xử lý mã lỗi không tìm thấy tài nguyên (404 Not Found)
+    if (error.response?.statusCode == 404) {
+      return 'Không tìm thấy nhà xuất bản.';
     }
 
     final responseData = error.response?.data;
@@ -174,10 +179,10 @@ class PublisherService {
   }
 
   // =========================================================
-  // CẬP NHẬT & XÓA NHÀ XUẤT BẢN (HỖ TRỢ CHO TOÀN BỘ CRUD)
+  // PRM-025: CẬP NHẬT THÔNG TIN NHÀ XUẤT BẢN (UPDATE PUBLISHER)
   // =========================================================
 
-  /// Gọi API PUT /api/publishers/{id} để cập nhật thông tin nhà xuất bản
+  /// Gọi API PUT /api/publishers/{id} với map dữ liệu JSON để cập nhật
   Future<Publisher> updatePublisher(
     String id,
     Map<String, dynamic> data,
@@ -193,6 +198,30 @@ class PublisherService {
       throw Exception(_errorMessage(error));
     }
   }
+
+  /// Hàm tiện ích cập nhật thông tin nhà xuất bản với từng tham số cụ thể (PRM-025)
+  Future<Publisher> updatePublisherData({
+    required String id,
+    required String name,
+    String? address,
+    String? phone,
+    String? email,
+    String? website,
+  }) async {
+    final payload = <String, dynamic>{
+      'name': name.trim(),
+      if (address != null && address.trim().isNotEmpty) 'address': address.trim(),
+      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      if (website != null && website.trim().isNotEmpty) 'website': website.trim(),
+    };
+
+    return updatePublisher(id, payload);
+  }
+
+  // =========================================================
+  // XÓA NHÀ XUẤT BẢN (HỖ TRỢ CHO TOÀN BỘ CRUD)
+  // =========================================================
 
   /// Gọi API DELETE /api/publishers/{id} để xóa nhà xuất bản
   Future<void> deletePublisher(String id) async {

@@ -1,5 +1,5 @@
 /// Nguyen Duy Khang - CE192012
-/// Model thực thể đại diện cho dữ liệu nhà xuất bản (PRM-023: Xem danh sách/chi tiết, PRM-024: Thêm mới)
+/// Model thực thể đại diện cho dữ liệu nhà xuất bản (PRM-023: Xem danh sách/chi tiết, PRM-024: Thêm mới, PRM-025: Cập nhật)
 class Publisher {
   final String id; // Mã định danh nhà xuất bản (UUID)
   final String name; // Tên nhà xuất bản
@@ -48,5 +48,26 @@ class Publisher {
       if (email.trim().isNotEmpty) 'email': email.trim(),
       if (website.trim().isNotEmpty) 'website': website.trim(),
     };
+  }
+
+  /// Tạo bản sao của Publisher với các thuộc tính được cập nhật mới (hỗ trợ PRM-025)
+  Publisher copyWith({
+    String? id,
+    String? name,
+    String? address,
+    String? phone,
+    String? email,
+    String? website,
+    String? status,
+  }) {
+    return Publisher(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      website: website ?? this.website,
+      status: status ?? this.status,
+    );
   }
 }

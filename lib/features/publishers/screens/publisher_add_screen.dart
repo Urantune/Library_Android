@@ -4,9 +4,9 @@ import '../models/publisher.dart';
 import '../services/publisher_service.dart';
 
 /// Nguyen Duy Khang - CE192012
-/// Màn hình biểu mẫu thêm mới nhà xuất bản (PRM-024: Create publisher)
+/// Màn hình biểu mẫu thêm mới (PRM-024) và cập nhật thông tin nhà xuất bản (PRM-025)
 class PublisherAddScreen extends StatefulWidget {
-  final Publisher? publisher; // Đối tượng nhà xuất bản (nếu null là Thêm mới, nếu có là Chỉnh sửa)
+  final Publisher? publisher; // Đối tượng nhà xuất bản (nếu null là Thêm mới - PRM-024, nếu có là Cập nhật - PRM-025)
 
   const PublisherAddScreen({super.key, this.publisher});
 
@@ -15,7 +15,7 @@ class PublisherAddScreen extends StatefulWidget {
 }
 
 /// Nguyen Duy Khang - CE192012
-/// State quản lý form nhập liệu, kiểm tra hợp lệ (validation) và gọi API tạo nhà xuất bản
+/// State quản lý form nhập liệu, kiểm tra hợp lệ (validation) và gọi API tạo mới/cập nhật nhà xuất bản
 class _PublisherAddScreenState extends State<PublisherAddScreen> {
   final _formKey = GlobalKey<FormState>();
   final PublisherService _service = PublisherService();
@@ -30,11 +30,13 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
   // Cờ theo dõi trạng thái đang gửi request API lên Backend
   bool _isSaving = false;
 
+  // Xác định chế độ: true là Cập nhật (PRM-025), false là Thêm mới (PRM-024)
   bool get isEditing => widget.publisher != null;
 
   @override
   void initState() {
     super.initState();
+    // Khởi tạo các ô nhập liệu (nếu ở chế độ Cập nhật thì điền sẵn thông tin cũ của nhà xuất bản)
     _nameController = TextEditingController(text: widget.publisher?.name ?? '');
     _emailController = TextEditingController(text: widget.publisher?.email ?? '');
     _phoneController = TextEditingController(text: widget.publisher?.phone ?? '');
@@ -54,7 +56,7 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
     super.dispose();
   }
 
-  /// PRM-024: Xử lý submit form, validate dữ liệu và gọi API tạo nhà xuất bản mới
+  /// Xử lý submit form: validate dữ liệu và gọi API tạo mới (PRM-024) hoặc cập nhật (PRM-025)
   Future<void> _submit() async {
     // 1. Kiểm tra tính hợp lệ của tất cả các trường trong form
     if (!_formKey.currentState!.validate()) return;
@@ -64,23 +66,17 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
 
     try {
       if (isEditing) {
-        // Cập nhật nhà xuất bản nếu ở chế độ sửa
-        await _service.updatePublisher(
-          widget.publisher!.id,
-          {
-            'name': _nameController.text.trim(),
-            if (_addressController.text.trim().isNotEmpty)
-              'address': _addressController.text.trim(),
-            if (_phoneController.text.trim().isNotEmpty)
-              'phone': _phoneController.text.trim(),
-            if (_emailController.text.trim().isNotEmpty)
-              'email': _emailController.text.trim(),
-            if (_websiteController.text.trim().isNotEmpty)
-              'website': _websiteController.text.trim(),
-          },
+        // PRM-025: Gọi API PUT /api/publishers/{id} để cập nhật thông tin nhà xuất bản
+        await _service.updatePublisherData(
+          id: widget.publisher!.id,
+          name: _nameController.text.trim(),
+          address: _addressController.text.trim(),
+          phone: _phoneController.text.trim(),
+          email: _emailController.text.trim(),
+          website: _websiteController.text.trim(),
         );
       } else {
-        // Gọi API POST /api/publishers để tạo mới nhà xuất bản (PRM-024)
+        // PRM-024: Gọi API POST /api/publishers để tạo mới nhà xuất bản
         await _service.createPublisherData(
           name: _nameController.text.trim(),
           address: _addressController.text.trim(),
@@ -104,7 +100,7 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
         ),
       );
 
-      // 4. Đóng màn hình và trả về true để màn hình danh sách tự động reload
+      // 4. Đóng màn hình và trả về true để màn hình danh sách/chi tiết tự động reload
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
@@ -130,7 +126,7 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
         title: Text(
-          isEditing ? 'Sửa nhà xuất bản' : 'Thêm nhà xuất bản',
+          isEditing ? 'Cập nhật nhà xuất bản' : 'Thêm nhà xuất bản',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Color(0xFF1E293B),
@@ -254,7 +250,7 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
               ),
               const SizedBox(height: 28),
 
-              // NÚT LƯU THÔNG TIN (PRM-024)
+              // NÚT LƯU THÔNG TIN (PRM-024 Thêm mới / PRM-025 Cập nhật)
               SizedBox(
                 height: 50,
                 child: FilledButton.icon(
@@ -274,11 +270,11 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.save_outlined),
+                      : Icon(isEditing ? Icons.check_circle_outline : Icons.save_outlined),
                   label: Text(
                     _isSaving
                         ? 'Đang lưu...'
-                        : (isEditing ? 'Cập nhật nhà xuất bản' : 'Lưu nhà xuất bản'),
+                        : (isEditing ? 'Lưu thay đổi' : 'Lưu nhà xuất bản'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

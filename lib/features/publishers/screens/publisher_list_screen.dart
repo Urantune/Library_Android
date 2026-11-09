@@ -6,7 +6,7 @@ import 'publisher_add_screen.dart';
 import 'publisher_detail_screen.dart';
 
 /// Nguyen Duy Khang - CE192012
-/// Màn hình quản lý danh sách nhà xuất bản (PRM-023: Hiển thị danh sách, PRM-024: Điều hướng thêm mới)
+/// Màn hình quản lý danh sách nhà xuất bản (PRM-023: Hiển thị danh sách, PRM-024: Thêm mới, PRM-025: Cập nhật)
 class PublisherListScreen extends StatefulWidget {
   const PublisherListScreen({super.key});
 
@@ -55,6 +55,21 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
     ).then((created) {
       if (created == true) {
         // Tải lại danh sách ngay lập tức khi thêm thành công
+        refreshPublishers();
+      }
+    });
+  }
+
+  /// PRM-025: Chuyển sang màn hình cập nhật thông tin nhà xuất bản; reload danh sách nếu sửa thành công
+  void openEditPublisher(Publisher publisher) {
+    Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PublisherAddScreen(publisher: publisher),
+      ),
+    ).then((updated) {
+      if (updated == true) {
+        // Tải lại danh sách ngay lập tức khi cập nhật thành công
         refreshPublishers();
       }
     });
@@ -230,7 +245,24 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
                                 ? 'Chưa có địa chỉ'
                                 : publisher.address,
                           ),
-                          trailing: const Icon(Icons.chevron_right),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Nút Chỉnh sửa trực tiếp từ danh sách (PRM-025)
+                              IconButton(
+                                tooltip: 'Cập nhật',
+                                icon: const Icon(
+                                  Icons.edit_outlined,
+                                  color: Color(0xFF0878F9),
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  openEditPublisher(publisher);
+                                },
+                              ),
+                              const Icon(Icons.chevron_right, color: Colors.grey),
+                            ],
+                          ),
                           // Chạm vào item để xem chi tiết nhà xuất bản (PRM-023)
                           onTap: () {
                             openDetail(publisher.id);
