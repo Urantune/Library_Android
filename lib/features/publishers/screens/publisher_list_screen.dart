@@ -50,7 +50,10 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
           );
         },
       ),
-    );
+    ).then((_) {
+      // Tải lại danh sách khi quay về (phòng trường hợp có CRUD)
+      refreshPublishers();
+    });
   }
 
   @override

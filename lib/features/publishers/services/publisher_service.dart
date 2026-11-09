@@ -14,41 +14,31 @@ class PublisherService {
   // XỬ LÝ RESPONSE
   // =========================================================
 
-  // Hỗ trợ các dạng response:
-  // 1. { "data": {...} }
-  // 2. { "result": {...} }
-  // 3. { "data": { "items": [...] } }
-  // 4. { "result": { "content": [...] } }
-  // 5. JSON trực tiếp.
+  // BE (catalog-service) trả về dạng:
+  // List:   { "status": 200, "data": { "items": [...], "page": 0, "size": 20, ... } }
+  // Detail: { "status": 200, "data": { "id": "...", "name": "...", ... } }
 
+  /// Lấy phần dữ liệu chính từ wrapper { "data": ... } hoặc { "result": ... }
   dynamic _unwrap(dynamic value) {
-    var current = value;
-
-    for (int i = 0; i < 5; i++) {
-      if (current is! Map) break;
-
-      if (current['data'] != null) {
-        current = current['data'];
-      } else if (current['result'] != null) {
-        current = current['result'];
-      } else if (current['publisher'] != null) {
-        current = current['publisher'];
-      } else {
-        break;
-      }
+    if (value is Map) {
+      // Ưu tiên field "data" (ApiResponse của catalog-service dùng field này)
+      if (value['data'] != null) return value['data'];
+      if (value['result'] != null) return value['result'];
     }
-
-    return current;
+    return value;
   }
 
   List<Publisher> _parsePublisherList(dynamic response) {
+    // Bước 1: lấy phần data bên trong wrapper
     final data = _unwrap(response);
 
     dynamic items;
 
     if (data is List) {
+      // Trường hợp BE trả thẳng mảng
       items = data;
     } else if (data is Map) {
+      // PageResponse của BE dùng field "items"
       items = data['items'] ?? data['content'] ?? data['publishers'];
     }
 
@@ -72,6 +62,7 @@ class PublisherService {
   }
 
   Publisher _parsePublisher(dynamic response) {
+    // Bước 1: lấy phần data bên trong wrapper
     final data = _unwrap(response);
 
     if (data is! Map) {

@@ -144,6 +144,14 @@ class _PublisherDetailScreenState extends State<PublisherDetailScreen> {
                       'Email',
                       publisher.email,
                     ),
+                    buildInfo(
+                      'Website',
+                      publisher.website,
+                    ),
+                    buildInfo(
+                      'Trạng thái',
+                      publisher.status,
+                    ),
                   ],
                 ),
               ),

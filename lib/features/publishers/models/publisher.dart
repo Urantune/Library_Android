@@ -4,6 +4,8 @@ class Publisher {
   final String address;
   final String phone;
   final String email;
+  final String website;
+  final String status;
 
   const Publisher({
     required this.id,
@@ -11,6 +13,8 @@ class Publisher {
     required this.address,
     required this.phone,
     required this.email,
+    this.website = '',
+    this.status = '',
   });
 
   factory Publisher.fromJson(Map<String, dynamic> json) {
@@ -27,6 +31,8 @@ class Publisher {
       address: json['address']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
+      website: json['website']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
     );
   }
 
@@ -36,6 +42,7 @@ class Publisher {
       'address': address,
       'phone': phone,
       'email': email,
+      'website': website,
     };
   }
 }

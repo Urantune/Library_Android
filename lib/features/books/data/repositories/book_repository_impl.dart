@@ -38,10 +38,7 @@ class BookRepositoryImpl implements BookRepository {
   Future<T> _useRemote<T>(Future<T> Function(BookRemoteDataSource remote) online, Future<T> Function() offline) async {
     final remote = _remote;
     if (remote == null) return offline();
-    try {
-      return await online(remote);
-    } on DioException {
-      return offline();
-    }
+    // Gọi remote trực tiếp — không fallback ngầm để lỗi mạng/API hiện rõ
+    return online(remote);
   }
 }
