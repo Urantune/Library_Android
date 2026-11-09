@@ -120,30 +120,6 @@ public class LoansService implements ILoansService {
         return toResponse(savedLoan, savedItems);
     }
 
-    @Override
-    @Transactional
-    public LoanResponseDTO rejectLoan(String loanId, String adminUserId, String reason) {
-        if (adminUserId == null || adminUserId.isBlank()) {
-            throw new AppException(ErrorCode.BAD_REQUEST);
-        }
-
-        Loans loan = loansRepository.findById(loanId)
-                .orElseThrow(() -> new AppException(ErrorCode.LOAN_NOT_FOUND));
-        if (!"REQUESTED".equals(loan.getStatus())) {
-            throw new AppException(ErrorCode.LOAN_NOT_REJECTABLE);
-        }
-
-        String now = Instant.now().toString();
-        loan.setStatus("REJECTED");
-        loan.setProcessedBy(adminUserId);
-        loan.setRejectionReason(reason == null || reason.isBlank() ? null : reason.trim());
-        loan.setUpdatedAt(now);
-
-        Loans savedLoan = loansRepository.save(loan);
-        List<LoanItems> items = loanItemsRepository.findByLoanIdOrderByIdAsc(loanId);
-        return toResponse(savedLoan, items);
-    }
-
     private PageDTO<LoanResponseDTO> toLoanPage(Page<Loans> loans, boolean borrowedItemsOnly) {
         List<String> loanIds = loans.getContent().stream()
                 .map(Loans::getId)

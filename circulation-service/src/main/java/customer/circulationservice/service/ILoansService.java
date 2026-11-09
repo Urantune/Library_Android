@@ -15,7 +15,5 @@ public interface ILoansService {
 
     LoanResponseDTO approveLoan(String loanId, String adminUserId);
 
-    LoanResponseDTO rejectLoan(String loanId, String adminUserId, String reason);
-
     PageDTO<LoanResponseDTO> getLoanHistory(String userId, int page, int size);
 }

@@ -1,7 +1,6 @@
 package customer.circulationservice.controller;
 
 import customer.circulationservice.dto.request.LoanRequestDTO;
-import customer.circulationservice.dto.request.RejectLoanRequestDTO;
 import customer.circulationservice.dto.response.LoanResponseDTO;
 import customer.circulationservice.dto.response.PageDTO;
 import customer.circulationservice.dto.response.ResponseAPI;
@@ -32,23 +31,6 @@ import java.util.Arrays;
 public class LoansController {
     ILoansService loansService;
 
-    @PostMapping("/admin/{loanId}/reject")
-    public ResponseEntity<ResponseAPI<LoanResponseDTO>> rejectLoan(
-            @PathVariable String loanId,
-            @RequestBody(required = false) @Valid RejectLoanRequestDTO request,
-            @RequestHeader(value = "X-User-Id", required = false) String adminUserId,
-            @RequestHeader(value = "X-User-Roles", required = false) String currentUserRoles) {
-        verifyAdmin(currentUserRoles);
-        String reason = request == null ? null : request.getReason();
-        LoanResponseDTO result = loansService.rejectLoan(loanId, adminUserId, reason);
-        return ResponseEntity.ok(
-                ResponseAPI.<LoanResponseDTO>builder()
-                        .message("Loan request rejected")
-                        .timestamp(Instant.now().toString())
-                        .result(result)
-                        .build());
-    }
-
     @PostMapping("/admin/{loanId}/approve")
     public ResponseEntity<ResponseAPI<LoanResponseDTO>> approveLoan(
             @PathVariable String loanId,
@@ -63,6 +45,8 @@ public class LoansController {
                         .result(result)
                         .build());
     }
+
+
 
     @GetMapping("/admin")
     public ResponseEntity<ResponseAPI<PageDTO<LoanResponseDTO>>> getAllLoans(
