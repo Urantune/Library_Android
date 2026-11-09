@@ -18,6 +18,7 @@ import '../widgets/push_menu_layout.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/top_bar.dart';
 import 'dashboard_home.dart';
+import 'library_screen.dart';
 import 'placeholder_page.dart';
 import 'user_dashboard_home.dart';
 
@@ -59,7 +60,8 @@ class DashboardPage extends ConsumerWidget {
       case NavIndex.dashboard:
         return _buildBottomNavPage(nav.bottomNavIndex, isStaff);
       case NavIndex.book:
-        return const BookListScreen();
+        // Quản trị/thủ thư quản lý sách; độc giả chỉ xem thư viện (read-only).
+        return isStaff ? const BookListScreen() : const LibraryScreen();
       case NavIndex.author:
         return const AuthorListScreen();
       case NavIndex.category:
@@ -67,7 +69,8 @@ class DashboardPage extends ConsumerWidget {
       case NavIndex.publisher:
         return const PublisherListScreen();
       case NavIndex.user:
-        return const UserListScreen();
+        // Độc giả không có quyền quản lý người dùng.
+        return isStaff ? const UserListScreen() : const ProfileScreen();
       case NavIndex.loan:
         return const BorrowedLoansScreen();
       case NavIndex.notification:
