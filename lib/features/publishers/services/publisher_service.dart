@@ -3,104 +3,95 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../models/publisher.dart';
 
+/// Nguyen Duy Khang - CE192012
+/// Service xử lý gọi API kết nối Backend cho chức năng Quản lý nhà xuất bản
+/// Phụ trách PRM-023 (Lấy danh sách, xem chi tiết) và PRM-024 (Tạo mới nhà xuất bản)
 class PublisherService {
-  // Sử dụng Dio chung của project.
-  // Client này đã tích hợp AuthInterceptor và TokenStorage.
+  // Dio client dùng chung của app (đã tích hợp TokenStorage và AuthInterceptor tự đính kèm JWT)
   final Dio _dio;
 
   PublisherService({Dio? dio}) : _dio = dio ?? ApiClient.catalogDio;
 
   // =========================================================
-  // XỬ LÝ RESPONSE
+  // BỘ BÓC TÁCH VÀ PARSE DỮ LIỆU RESPONSE TỪ BACKEND
   // =========================================================
 
-  // BE (catalog-service) trả về dạng:
-  // List:   { "status": 200, "data": { "items": [...], "page": 0, "size": 20, ... } }
-  // Detail: { "status": 200, "data": { "id": "...", "name": "...", ... } }
-
-  /// Lấy phần dữ liệu chính từ wrapper { "data": ... } hoặc { "result": ... }
+  /// Bóc tách phần dữ liệu bên trong envelope của API Backend ({ "status": 200, "data": ... })
   dynamic _unwrap(dynamic value) {
     if (value is Map) {
-      // Ưu tiên field "data" (ApiResponse của catalog-service dùng field này)
       if (value['data'] != null) return value['data'];
       if (value['result'] != null) return value['result'];
     }
     return value;
   }
 
+  /// Chuyển đổi dữ liệu JSON trả về thành danh sách List<Publisher>
   List<Publisher> _parsePublisherList(dynamic response) {
-    // Bước 1: lấy phần data bên trong wrapper
     final data = _unwrap(response);
-
     dynamic items;
 
     if (data is List) {
-      // Trường hợp BE trả thẳng mảng
       items = data;
     } else if (data is Map) {
-      // PageResponse của BE dùng field "items"
+      // Backend PageResponse trả về danh sách trong thuộc tính 'items' hoặc 'content'
       items = data['items'] ?? data['content'] ?? data['publishers'];
     }
 
     if (items is! List) {
-      throw const FormatException(
-        'Response danh sách nhà xuất bản không hợp lệ.',
-      );
+      throw const FormatException('Response danh sách nhà xuất bản không hợp lệ.');
     }
 
     return items.map((item) {
       if (item is! Map) {
-        throw const FormatException(
-          'Thông tin nhà xuất bản không hợp lệ.',
-        );
+        throw const FormatException('Thông tin nhà xuất bản không hợp lệ.');
       }
-
-      return Publisher.fromJson(
-        Map<String, dynamic>.from(item),
-      );
+      return Publisher.fromJson(Map<String, dynamic>.from(item));
     }).toList();
   }
 
+  /// Chuyển đổi dữ liệu JSON chi tiết thành một đối tượng Publisher
   Publisher _parsePublisher(dynamic response) {
-    // Bước 1: lấy phần data bên trong wrapper
     final data = _unwrap(response);
 
     if (data is! Map) {
-      throw const FormatException(
-        'Response chi tiết nhà xuất bản không hợp lệ.',
-      );
+      throw const FormatException('Response chi tiết nhà xuất bản không hợp lệ.');
     }
 
-    return Publisher.fromJson(
-      Map<String, dynamic>.from(data),
-    );
+    return Publisher.fromJson(Map<String, dynamic>.from(data));
   }
 
   // =========================================================
-  // XỬ LÝ LỖI
+  // XỬ LÝ VÀ CHUYỂN ĐỔI THÔNG BÁO LỖI (ERROR HANDLING)
   // =========================================================
 
+  /// Phân tích lỗi từ DioException để trả về câu thông báo thân thiện bằng tiếng Việt
   String _errorMessage(DioException error) {
-    final responseData = error.response?.data;
+    // Xử lý mã lỗi trùng tên nhà xuất bản từ server trả về (409 Conflict)
+    if (error.response?.statusCode == 409) {
+      return 'Tên nhà xuất bản đã tồn tại trong hệ thống.';
+    }
 
+    final responseData = error.response?.data;
     if (responseData is Map) {
       final message = responseData['message'] ??
           responseData['error'] ??
-          responseData['detail'];
+          responseData['detail'] ??
+          responseData['reason'];
 
       if (message != null) {
         return message.toString();
       }
     }
 
+    // Xử lý lỗi kết nối mạng và timeout
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.sendTimeout:
-        return 'Kết nối đến máy chủ quá thời gian.';
+        return 'Kết nối đến máy chủ quá thời gian chờ.';
 
       case DioExceptionType.connectionError:
-        return 'Không thể kết nối Backend. Kiểm tra máy chủ và mạng.';
+        return 'Không thể kết nối Backend. Vui lòng kiểm tra server và mạng.';
 
       default:
         return error.message ?? 'Đã xảy ra lỗi khi xử lý nhà xuất bản.';
@@ -108,16 +99,17 @@ class PublisherService {
   }
 
   // =========================================================
-  // GET: DANH SÁCH NHÀ XUẤT BẢN
+  // PRM-023: LẤY DANH SÁCH NHÀ XUẤT BẢN (GET LIST)
   // =========================================================
 
+  /// Gọi API GET /api/publishers để lấy danh sách tất cả nhà xuất bản
   Future<List<Publisher>> getPublishers() async {
     try {
       final response = await _dio.get(
         '/api/publishers',
         queryParameters: {
           'page': 0,
-          'size': 100,
+          'size': 100, // Lấy số lượng vừa đủ hiển thị danh sách
         },
       );
 
@@ -128,9 +120,10 @@ class PublisherService {
   }
 
   // =========================================================
-  // GET: CHI TIẾT NHÀ XUẤT BẢN
+  // PRM-023: XEM CHI TIẾT NHÀ XUẤT BẢN (GET DETAIL)
   // =========================================================
 
+  /// Gọi API GET /api/publishers/{id} để lấy thông tin chi tiết một nhà xuất bản theo ID
   Future<Publisher> getPublisherById(String id) async {
     try {
       final response = await _dio.get(
@@ -144,12 +137,11 @@ class PublisherService {
   }
 
   // =========================================================
-  // POST: THÊM NHÀ XUẤT BẢN
+  // PRM-024: THÊM NHÀ XUẤT BẢN MỚI (CREATE PUBLISHER)
   // =========================================================
 
-  Future<Publisher> createPublisher(
-    Map<String, dynamic> data,
-  ) async {
+  /// Gọi API POST /api/publishers với map dữ liệu JSON
+  Future<Publisher> createPublisher(Map<String, dynamic> data) async {
     try {
       final response = await _dio.post(
         '/api/publishers',
@@ -162,10 +154,30 @@ class PublisherService {
     }
   }
 
+  /// Hàm tiện ích tạo nhà xuất bản với từng tham số cụ thể, tự loại bỏ trường trống
+  Future<Publisher> createPublisherData({
+    required String name,
+    String? address,
+    String? phone,
+    String? email,
+    String? website,
+  }) async {
+    final payload = <String, dynamic>{
+      'name': name.trim(),
+      if (address != null && address.trim().isNotEmpty) 'address': address.trim(),
+      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      if (website != null && website.trim().isNotEmpty) 'website': website.trim(),
+    };
+
+    return createPublisher(payload);
+  }
+
   // =========================================================
-  // PUT: CẬP NHẬT NHÀ XUẤT BẢN
+  // CẬP NHẬT & XÓA NHÀ XUẤT BẢN (HỖ TRỢ CHO TOÀN BỘ CRUD)
   // =========================================================
 
+  /// Gọi API PUT /api/publishers/{id} để cập nhật thông tin nhà xuất bản
   Future<Publisher> updatePublisher(
     String id,
     Map<String, dynamic> data,
@@ -182,10 +194,7 @@ class PublisherService {
     }
   }
 
-  // =========================================================
-  // DELETE: XÓA NHÀ XUẤT BẢN
-  // =========================================================
-
+  /// Gọi API DELETE /api/publishers/{id} để xóa nhà xuất bản
   Future<void> deletePublisher(String id) async {
     try {
       await _dio.delete(

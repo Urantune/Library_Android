@@ -1,11 +1,13 @@
+/// Nguyen Duy Khang - CE192012
+/// Model thực thể đại diện cho dữ liệu nhà xuất bản (PRM-023: Xem danh sách/chi tiết, PRM-024: Thêm mới)
 class Publisher {
-  final String id;
-  final String name;
-  final String address;
-  final String phone;
-  final String email;
-  final String website;
-  final String status;
+  final String id; // Mã định danh nhà xuất bản (UUID)
+  final String name; // Tên nhà xuất bản
+  final String address; // Địa chỉ
+  final String phone; // Số điện thoại
+  final String email; // Email liên hệ
+  final String website; // Địa chỉ website
+  final String status; // Trạng thái hoạt động (ACTIVE/INACTIVE)
 
   const Publisher({
     required this.id,
@@ -17,6 +19,7 @@ class Publisher {
     this.status = '',
   });
 
+  /// Chuyển đổi dữ liệu JSON nhận từ Backend thành đối tượng Publisher
   factory Publisher.fromJson(Map<String, dynamic> json) {
     final rawId = json['id'];
     if (rawId == null || rawId.toString().trim().isEmpty) {
@@ -36,13 +39,14 @@ class Publisher {
     );
   }
 
+  /// Chuyển đối tượng thành JSON để gửi lên Backend khi tạo/sửa (loại bỏ trường rỗng)
   Map<String, dynamic> toWriteJson() {
     return {
-      'name': name,
-      'address': address,
-      'phone': phone,
-      'email': email,
-      'website': website,
+      'name': name.trim(),
+      if (address.trim().isNotEmpty) 'address': address.trim(),
+      if (phone.trim().isNotEmpty) 'phone': phone.trim(),
+      if (email.trim().isNotEmpty) 'email': email.trim(),
+      if (website.trim().isNotEmpty) 'website': website.trim(),
     };
   }
 }
