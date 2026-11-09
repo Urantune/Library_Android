@@ -4,18 +4,32 @@ class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
+  /// true: ADMIN/LIBRARIAN (có tab quản lý người dùng).
+  /// false: độc giả (tab mượn - trả thay cho tab người dùng).
+  final bool isStaff;
+
   const BottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.isStaff = true,
   });
 
-  static const _items = [
+  static const _staffItems = [
     _NavItem(Icons.home_rounded, 'Trang chủ'),
     _NavItem(Icons.people_outline_rounded, 'Người dùng'),
     _NavItem(Icons.notifications_none_rounded, 'Thông báo'),
     _NavItem(Icons.person_outline_rounded, 'Hồ sơ'),
   ];
+
+  static const _memberItems = [
+    _NavItem(Icons.home_rounded, 'Trang chủ'),
+    _NavItem(Icons.swap_horiz_rounded, 'Mượn trả'),
+    _NavItem(Icons.notifications_none_rounded, 'Thông báo'),
+    _NavItem(Icons.person_outline_rounded, 'Hồ sơ'),
+  ];
+
+  List<_NavItem> get _items => isStaff ? _staffItems : _memberItems;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +38,7 @@ class BottomNavBar extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, -2),
           ),
@@ -36,11 +50,11 @@ class BottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              for (int i = 0; i < _items.length; i++)
+              for (final entry in _items.asMap().entries)
                 _NavTile(
-                  item: _items[i],
-                  selected: currentIndex == i,
-                  onTap: () => onTap(i),
+                  item: entry.value,
+                  selected: currentIndex == entry.key,
+                  onTap: () => onTap(entry.key),
                 ),
             ],
           ),

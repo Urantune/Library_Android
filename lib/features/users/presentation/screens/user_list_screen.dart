@@ -73,7 +73,7 @@ class _UserListScreenState extends ConsumerState<UserListScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String?>(
-                        value: roleFilter,
+                        initialValue: roleFilter,
                         decoration: InputDecoration(
                           labelText: 'Vai trò',
                           filled: true,
@@ -97,7 +97,7 @@ class _UserListScreenState extends ConsumerState<UserListScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<String?>(
-                        value: statusFilter,
+                        initialValue: statusFilter,
                         decoration: InputDecoration(
                           labelText: 'Trạng thái',
                           filled: true,

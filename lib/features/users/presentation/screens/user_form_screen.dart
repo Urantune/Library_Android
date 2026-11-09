@@ -148,7 +148,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      if (!profileOnly) TextFormField(
+                      TextFormField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(
@@ -159,7 +159,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (!profileOnly) DropdownButtonFormField<String>(
-                        value: _selectedRole,
+                        initialValue: _selectedRole,
                         decoration: const InputDecoration(
                           labelText: 'Vai trò',
                           prefixIcon: Icon(Icons.shield_outlined),
@@ -250,9 +250,11 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isEditing
-                  ? 'Đã cập nhật người dùng.'
-                  : 'Đã thêm người dùng.',
+              profileOnly
+                  ? 'Đã cập nhật hồ sơ.'
+                  : isEditing
+                      ? 'Đã cập nhật người dùng.'
+                      : 'Đã thêm người dùng.',
             ),
           ),
         );

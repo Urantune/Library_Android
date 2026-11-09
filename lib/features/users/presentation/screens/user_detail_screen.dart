@@ -13,6 +13,11 @@ class UserDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userDetailProvider(userId));
+    // Chỉ ADMIN mới được sửa/khóa/xóa; người dùng khác chỉ xem.
+    final canManage = ref.watch(currentUserProvider).maybeWhen(
+          data: (me) => me.role.toUpperCase() == 'ADMIN',
+          orElse: () => false,
+        );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
@@ -52,7 +57,7 @@ class UserDetailScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (user) => _UserDetailContent(user: user),
+        data: (user) => _UserDetailContent(user: user, canManage: canManage),
       ),
     );
   }
@@ -60,8 +65,9 @@ class UserDetailScreen extends ConsumerWidget {
 
 class _UserDetailContent extends ConsumerWidget {
   final User user;
+  final bool canManage;
 
-  const _UserDetailContent({required this.user});
+  const _UserDetailContent({required this.user, required this.canManage});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -170,45 +176,47 @@ class _UserDetailContent extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => UserFormScreen(user: user),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Sửa'),
+          if (canManage) ...[
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => UserFormScreen(user: user),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Sửa'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _showLockConfirm(context, ref),
-                  icon: Icon(active ? Icons.lock : Icons.lock_open),
-                  label: Text(active ? 'Khóa' : 'Mở khóa'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showLockConfirm(context, ref),
+                    icon: Icon(active ? Icons.lock : Icons.lock_open),
+                    label: Text(active ? 'Khóa' : 'Mở khóa'),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFB42318),
-                side: const BorderSide(color: Color(0xFFB42318)),
-              ),
-              onPressed: () => _showDeleteConfirm(context, ref),
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Xóa người dùng'),
+              ],
             ),
-          ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFB42318),
+                  side: const BorderSide(color: Color(0xFFB42318)),
+                ),
+                onPressed: () => _showDeleteConfirm(context, ref),
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Xóa người dùng'),
+              ),
+            ),
+          ],
         ],
       ),
     );

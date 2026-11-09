@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' show WatchContext;
 
 import '../../features/authors/presentation/screens/author_list_screen.dart';
 import '../../features/bottom_nav/bottom_nav_bar.dart';
@@ -8,6 +9,7 @@ import '../../features/categories/screens/category_screen.dart';
 import '../../features/notifications/presentation/screens/notification_list_screen.dart';
 import '../../features/loans/presentation/screens/borrowed_loans_screen.dart';
 import '../../features/publishers/screens/publisher_list_screen.dart';
+import '../../features/sign/controllers/auth_controller.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
 import '../../features/users/presentation/screens/user_list_screen.dart';
 import '../providers/navigation_provider.dart';
@@ -17,28 +19,45 @@ import '../widgets/sidebar.dart';
 import '../widgets/top_bar.dart';
 import 'dashboard_home.dart';
 import 'placeholder_page.dart';
+import 'user_dashboard_home.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
-  Widget _buildBottomNavPage(int bottomNavIndex) {
-    switch (bottomNavIndex) {
-      case 1:
-        return const UserListScreen();
-      case 2:
-        return const NotificationListScreen();
-      case 3:
-        return const ProfileScreen();
-      case 0:
-      default:
-        return const DashboardHome();
-    }
+  /// ADMIN/LIBRARIAN dùng dashboard quản trị; MEMBER dùng dashboard độc giả.
+  bool _isStaff(WidgetRef ref) {
+    final roles = ref.watch(
+      authControllerProvider.select((state) => state.user?.roles ?? const []),
+    );
+    return roles.any((role) {
+      final value = role.toUpperCase();
+      return value == 'ADMIN' || value == 'LIBRARIAN' || value == 'STAFF';
+    });
   }
 
-  Widget _buildPage(NavigationProvider nav) {
+  Widget _buildBottomNavPage(int bottomNavIndex, bool isStaff) {
+    final pages = isStaff
+        ? const <Widget>[
+            DashboardHome(),
+            UserListScreen(),
+            NotificationListScreen(),
+            ProfileScreen(),
+          ]
+        : const <Widget>[
+            UserDashboardHome(),
+            BorrowedLoansScreen(),
+            NotificationListScreen(),
+            ProfileScreen(),
+          ];
+    final index =
+        bottomNavIndex >= 0 && bottomNavIndex < pages.length ? bottomNavIndex : 0;
+    return pages[index];
+  }
+
+  Widget _buildPage(NavigationProvider nav, bool isStaff) {
     switch (nav.selectedIndex) {
       case NavIndex.dashboard:
-        return _buildBottomNavPage(nav.bottomNavIndex);
+        return _buildBottomNavPage(nav.bottomNavIndex, isStaff);
       case NavIndex.book:
         return const BookListScreen();
       case NavIndex.author:
@@ -59,9 +78,10 @@ class DashboardPage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final nav = context.watch<NavigationProvider>();
     final showBottomNav = nav.showBottomNav;
+    final isStaff = _isStaff(ref);
 
     return Scaffold(
       backgroundColor: AppColors.sidebar,
@@ -87,7 +107,7 @@ class DashboardPage extends StatelessWidget {
                         ? 'bn${nav.bottomNavIndex}'
                         : 'sb${nav.selectedIndex}',
                   ),
-                  child: _buildPage(nav),
+                  child: _buildPage(nav, isStaff),
                 ),
               ),
             ),
@@ -95,6 +115,7 @@ class DashboardPage extends StatelessWidget {
             if (showBottomNav)
               BottomNavBar(
                 currentIndex: nav.bottomNavIndex,
+                isStaff: isStaff,
                 onTap: nav.selectBottomNav,
               ),
           ],

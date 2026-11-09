@@ -118,7 +118,7 @@ class _ProfileContent extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '@${user.username}',
+                    user.username.isEmpty ? user.email : '@${user.username}',
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(0xFF94A3B8),
