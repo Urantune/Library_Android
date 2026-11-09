@@ -9,5 +9,13 @@ public interface ILoansService {
 
     PageDTO<LoanResponseDTO> getBorrowedLoans(String userId, int page, int size);
 
+    PageDTO<LoanResponseDTO> getRequestedLoans(String userId, int page, int size);
+
+    PageDTO<LoanResponseDTO> getAllLoans(int page, int size);
+
+    LoanResponseDTO approveLoan(String loanId, String adminUserId);
+
     PageDTO<LoanResponseDTO> getLoanHistory(String userId, int page, int size);
+
+    LoanResponseDTO rejectLoan(String loanId, String adminUserId, String reason);
 }
