@@ -63,11 +63,13 @@ class DashboardPage extends ConsumerWidget {
         // Quản trị/thủ thư quản lý sách; độc giả chỉ xem thư viện (read-only).
         return isStaff ? const BookListScreen() : const LibraryScreen();
       case NavIndex.author:
-        return const AuthorListScreen();
+        return isStaff ? const AuthorListScreen() : const LibraryScreen();
       case NavIndex.category:
-        return CategoryScreen(onBack: nav.goToDashboard);
+        return isStaff
+            ? CategoryScreen(onBack: nav.goToDashboard)
+            : const LibraryScreen();
       case NavIndex.publisher:
-        return const PublisherListScreen();
+        return isStaff ? const PublisherListScreen() : const LibraryScreen();
       case NavIndex.user:
         // Độc giả không có quyền quản lý người dùng.
         return isStaff ? const UserListScreen() : const ProfileScreen();
@@ -96,6 +98,7 @@ class DashboardPage extends ConsumerWidget {
             selectedIndex: nav.selectedIndex,
             onSelected: nav.selectMenu,
             onClose: nav.closeMenu,
+            isStaff: isStaff,
           ),
         ),
         child: Column(

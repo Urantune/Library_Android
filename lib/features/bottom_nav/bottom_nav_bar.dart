@@ -24,7 +24,7 @@ class BottomNavBar extends StatelessWidget {
 
   static const _memberItems = [
     _NavItem(Icons.home_rounded, 'Trang chủ'),
-    _NavItem(Icons.swap_horiz_rounded, 'Mượn trả'),
+    _NavItem(Icons.history_rounded, 'Đã mượn'),
     _NavItem(Icons.notifications_none_rounded, 'Thông báo'),
     _NavItem(Icons.person_outline_rounded, 'Hồ sơ'),
   ];
