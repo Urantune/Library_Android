@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface LoanItemsRepository extends JpaRepository <LoanItems, String> {
     java.util.List<LoanItems> findByLoanIdOrderByIdAsc(String loanId);
+
+    java.util.Optional<LoanItems> findByReturnOperationId(String returnOperationId);
 }

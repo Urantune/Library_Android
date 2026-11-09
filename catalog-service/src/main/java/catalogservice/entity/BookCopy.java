@@ -17,6 +17,9 @@ public class BookCopy extends TimestampedEntity {
     @Column(name = "shelf_location", columnDefinition = "TEXT") private String shelfLocation;
     @Enumerated(EnumType.STRING) @Column(name = "condition", columnDefinition = "TEXT") private BookConditionStatus conditionStatus;
     @Enumerated(EnumType.STRING) @Column(name = "circulation_status", columnDefinition = "TEXT") private BookCopyStatus status;
+    @Column(name = "holder_type", columnDefinition = "TEXT") private String holderType;
+    @Column(name = "holder_id", columnDefinition = "TEXT") private String holderId;
+    @Column(name = "aggregate_version", nullable = false) private long aggregateVersion = 1;
     @Column(name = "acquired_at", columnDefinition = "DATETIME") private LocalDateTime acquiredAt;
     public String getId() { return id; }
     public Book getBook() { return book; }
@@ -29,6 +32,12 @@ public class BookCopy extends TimestampedEntity {
     public void setConditionStatus(BookConditionStatus conditionStatus) { this.conditionStatus = conditionStatus; }
     public BookCopyStatus getStatus() { return status; }
     public void setStatus(BookCopyStatus status) { this.status = status; }
+    public String getHolderType() { return holderType; }
+    public void setHolderType(String holderType) { this.holderType = holderType; }
+    public String getHolderId() { return holderId; }
+    public void setHolderId(String holderId) { this.holderId = holderId; }
+    public long getAggregateVersion() { return aggregateVersion; }
+    public void setAggregateVersion(long aggregateVersion) { this.aggregateVersion = aggregateVersion; }
     public LocalDateTime getAcquiredAt() { return acquiredAt; }
     public void setAcquiredAt(LocalDateTime acquiredAt) { this.acquiredAt = acquiredAt; }
 }

@@ -39,4 +39,7 @@ public class LoanItems {
 
     @Column(name = "fine_amount", nullable = false)
     Double fineAmount = 0.0; //[cite: 1] (DEFAULT 0)
+
+    @Column(name = "return_operation_id")
+    String returnOperationId;
 }
