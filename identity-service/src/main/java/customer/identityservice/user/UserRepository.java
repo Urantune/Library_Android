@@ -20,13 +20,13 @@ public class UserRepository {
 
     public List<UserRow> findAll(String query, int offset, int size) {
         String match = "%" + query.toLowerCase() + "%";
-        return jdbc.query("SELECT u.id, u.username, u.email, u.full_name, u.phone, u.status, u.created_at, u.updated_at, COALESCE((SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=u.id LIMIT 1),'MEMBER') role FROM users u WHERE lower(COALESCE(u.username,'')) LIKE ? OR lower(u.email) LIKE ? OR lower(u.full_name) LIKE ? ORDER BY u.created_at DESC LIMIT ? OFFSET ?",
+        return jdbc.query("SELECT u.id, u.username, u.email, u.full_name, u.phone, u.status, u.created_at, u.updated_at, COALESCE((SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=u.id LIMIT 1),'MEMBER') role FROM users u WHERE (lower(COALESCE(u.username,'')) LIKE ? OR lower(u.email) LIKE ? OR lower(u.full_name) LIKE ?) AND u.status <> 'INACTIVE' ORDER BY u.created_at DESC LIMIT ? OFFSET ?",
                 mapper, match, match, match, size, offset);
     }
 
     public long count(String query) {
         String match = "%" + query.toLowerCase() + "%";
-        return jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE lower(COALESCE(username,'')) LIKE ? OR lower(email) LIKE ? OR lower(full_name) LIKE ?", Long.class, match, match, match);
+        return jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE (lower(COALESCE(username,'')) LIKE ? OR lower(email) LIKE ? OR lower(full_name) LIKE ?) AND status <> 'INACTIVE'", Long.class, match, match, match);
     }
 
     public Optional<UserRow> findById(String id) {
@@ -66,7 +66,11 @@ public class UserRepository {
         if ("LOCKED".equals(status)) jdbc.update("UPDATE refresh_tokens SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL", Instant.now().toString(), id);
     }
 
-    public int delete(String id) { return jdbc.update("UPDATE users SET status='INACTIVE', updated_at=? WHERE id=?", Instant.now().toString(), id); }
+    public int delete(String id) {
+        // Thu hồi refresh token đang hoạt động trước khi vô hiệu hóa tài khoản.
+        jdbc.update("UPDATE refresh_tokens SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL", Instant.now().toString(), id);
+        return jdbc.update("UPDATE users SET status='INACTIVE', updated_at=? WHERE id=?", Instant.now().toString(), id);
+    }
 
     public void audit(String actorId, String action, String targetId, String outcome, String traceId) {
         jdbc.update("INSERT INTO admin_audit_logs(id,actor_user_id,action,target_user_id,outcome,trace_id,created_at) VALUES(?,?,?,?,?,?,?)", UUID.randomUUID().toString(), actorId, action, targetId, outcome, traceId, Instant.now().toString());

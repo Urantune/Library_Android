@@ -39,6 +39,11 @@ public class UserController {
         return Envelope.success("Chi tiết người dùng", service.get(id), traceId(request));
     }
 
+    /** Hồ sơ đầy đủ của chính mình (username, SĐT, ngày tạo...). */
+    @GetMapping("/me/profile")
+    public Envelope<UserDto> getProfile(@RequestHeader("X-User-Id") String userId, HttpServletRequest request) {
+        return Envelope.success("Hồ sơ cá nhân", service.get(userId), traceId(request));
+    }
 
     @PutMapping("/me")
     public Envelope<UserDto> updateMe(@RequestHeader("X-User-Id") String userId, @RequestBody ProfileInput input, HttpServletRequest request) {

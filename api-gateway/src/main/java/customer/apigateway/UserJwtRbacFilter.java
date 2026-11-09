@@ -63,7 +63,8 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
         String method = request.getMethod().name();
         boolean allowedOperation;
         if (identityPath) {
-            boolean profileOperation = path.endsWith("/users/me")
+            boolean profileOperation = (path.endsWith("/users/me")
+                    || path.endsWith("/users/me/profile"))
                     && List.of("GET", "PUT").contains(method);
             boolean adminOperation = claims.roles().contains("ADMIN")
                     && ((path.endsWith("/users") && List.of("GET", "POST").contains(method))
