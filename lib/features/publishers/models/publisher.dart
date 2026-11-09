@@ -1,5 +1,5 @@
 /// Nguyen Duy Khang - CE192012
-/// Model thực thể đại diện cho dữ liệu nhà xuất bản (PRM-023: Xem danh sách/chi tiết, PRM-024: Thêm mới, PRM-025: Cập nhật)
+/// Model thực thể đại diện cho dữ liệu nhà xuất bản (PRM-023: Danh sách/Chi tiết, PRM-024: Thêm mới, PRM-025: Cập nhật, PRM-026: Xóa)
 class Publisher {
   final String id; // Mã định danh nhà xuất bản (UUID)
   final String name; // Tên nhà xuất bản

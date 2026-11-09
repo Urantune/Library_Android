@@ -97,6 +97,7 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
                 : 'Thêm nhà xuất bản thành công!',
           ),
           backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
         ),
       );
 
@@ -111,6 +112,7 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -123,182 +125,277 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
           isEditing ? 'Cập nhật nhà xuất bản' : 'Thêm nhà xuất bản',
           style: const TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1E293B),
+            color: Color(0xFF0F172A),
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
+        surfaceTintColor: Colors.transparent,
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
       ),
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _buildSectionCard(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 580),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                 children: [
-                  // TRƯỜNG 1: TÊN NHÀ XUẤT BẢN (BẮT BUỘC, MAX 200 KÝ TỰ THEO BACKEND)
-                  _buildLabel('Tên nhà xuất bản *'),
-                  TextFormField(
-                    controller: _nameController,
-                    textInputAction: TextInputAction.next,
-                    decoration: _inputDecoration(
-                      'Nhập tên nhà xuất bản (bắt buộc)',
-                      Icons.apartment_rounded,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Vui lòng nhập tên nhà xuất bản.';
-                      }
-                      if (value.trim().length > 200) {
-                        return 'Tên nhà xuất bản tối đa 200 ký tự.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 18),
+                  _buildSectionCard(
+                    children: [
+                      // Header card với icon
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.apartment_rounded,
+                              color: Color(0xFF0878F9),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isEditing
+                                      ? 'Chỉnh sửa thông tin'
+                                      : 'Thông tin nhà xuất bản mới',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Vui lòng điền các trường bên dưới',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                      const SizedBox(height: 20),
 
-                  // TRƯỜNG 2: EMAIL LIÊN HỆ (ĐỊNH DẠNG EMAIL, MAX 254 KÝ TỰ)
-                  _buildLabel('Email liên hệ'),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    decoration: _inputDecoration(
-                      'ví dụ: nxbkimdong@gmail.com',
-                      Icons.email_outlined,
-                    ),
-                    validator: (value) {
-                      if (value != null && value.trim().isNotEmpty) {
-                        final emailRegex =
-                            RegExp(r'^[\w\.\-]+@[\w\-]+(\.[\w\-]+)+$');
-                        if (!emailRegex.hasMatch(value.trim())) {
-                          return 'Định dạng email không hợp lệ.';
-                        }
-                        if (value.trim().length > 254) {
-                          return 'Email tối đa 254 ký tự.';
-                        }
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 18),
+                      // TRƯỜNG 1: TÊN NHÀ XUẤT BẢN (BẮT BUỘC, MAX 200 KÝ TỰ THEO BACKEND)
+                      _buildLabel('Tên nhà xuất bản *'),
+                      TextFormField(
+                        controller: _nameController,
+                        textInputAction: TextInputAction.next,
+                        decoration: _inputDecoration(
+                          'Nhập tên nhà xuất bản (bắt buộc)',
+                          Icons.apartment_rounded,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Vui lòng nhập tên nhà xuất bản.';
+                          }
+                          if (value.trim().length > 200) {
+                            return 'Tên nhà xuất bản tối đa 200 ký tự.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 18),
 
-                  // TRƯỜNG 3: SỐ ĐIỆN THOẠI (BÀN PHÍM PHONE, MAX 50 KÝ TỰ)
-                  _buildLabel('Số điện thoại'),
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                    decoration: _inputDecoration(
-                      'ví dụ: 028 3822 5340',
-                      Icons.phone_outlined,
-                    ),
-                    validator: (value) {
-                      if (value != null && value.trim().length > 50) {
-                        return 'Số điện thoại tối đa 50 ký tự.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 18),
+                      // TRƯỜNG 2: EMAIL LIÊN HỆ (ĐỊNH DẠNG EMAIL, MAX 254 KÝ TỰ)
+                      _buildLabel('Email liên hệ'),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        decoration: _inputDecoration(
+                          'ví dụ: nxbkimdong@gmail.com',
+                          Icons.email_outlined,
+                        ),
+                        validator: (value) {
+                          if (value != null && value.trim().isNotEmpty) {
+                            final emailRegex =
+                                RegExp(r'^[\w\.\-]+@[\w\-]+(\.[\w\-]+)+$');
+                            if (!emailRegex.hasMatch(value.trim())) {
+                              return 'Định dạng email không hợp lệ.';
+                            }
+                            if (value.trim().length > 254) {
+                              return 'Email tối đa 254 ký tự.';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 18),
 
-                  // TRƯỜNG 4: WEBSITE (BÀN PHÍM URL, MAX 500 KÝ TỰ)
-                  _buildLabel('Website'),
-                  TextFormField(
-                    controller: _websiteController,
-                    keyboardType: TextInputType.url,
-                    textInputAction: TextInputAction.next,
-                    decoration: _inputDecoration(
-                      'ví dụ: https://nxbkimdong.com.vn',
-                      Icons.language_rounded,
-                    ),
-                    validator: (value) {
-                      if (value != null && value.trim().length > 500) {
-                        return 'Website tối đa 500 ký tự.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 18),
+                      // TRƯỜNG 3: SỐ ĐIỆN THOẠI (BÀN PHÍM PHONE, MAX 50 KÝ TỰ)
+                      _buildLabel('Số điện thoại'),
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        decoration: _inputDecoration(
+                          'ví dụ: 028 3822 5340',
+                          Icons.phone_outlined,
+                        ),
+                        validator: (value) {
+                          if (value != null && value.trim().length > 50) {
+                            return 'Số điện thoại tối đa 50 ký tự.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 18),
 
-                  // TRƯỜNG 5: ĐỊA CHỈ (NHẬP NHIỀU DÒNG, MAX 500 KÝ TỰ)
-                  _buildLabel('Địa chỉ'),
-                  TextFormField(
-                    controller: _addressController,
-                    maxLines: 3,
-                    textInputAction: TextInputAction.done,
-                    decoration: _inputDecoration(
-                      'Nhập địa chỉ trụ sở nhà xuất bản',
-                      Icons.location_on_outlined,
-                    ),
-                    validator: (value) {
-                      if (value != null && value.trim().length > 500) {
-                        return 'Địa chỉ tối đa 500 ký tự.';
-                      }
-                      return null;
-                    },
+                      // TRƯỜNG 4: WEBSITE (BÀN PHÍM URL, MAX 500 KÝ TỰ)
+                      _buildLabel('Website'),
+                      TextFormField(
+                        controller: _websiteController,
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.next,
+                        decoration: _inputDecoration(
+                          'ví dụ: https://nxbkimdong.com.vn',
+                          Icons.language_rounded,
+                        ),
+                        validator: (value) {
+                          if (value != null && value.trim().length > 500) {
+                            return 'Website tối đa 500 ký tự.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 18),
+
+                      // TRƯỜNG 5: ĐỊA CHỈ (NHẬP NHIỀU DÒNG, MAX 500 KÝ TỰ)
+                      _buildLabel('Địa chỉ'),
+                      TextFormField(
+                        controller: _addressController,
+                        maxLines: 3,
+                        textInputAction: TextInputAction.done,
+                        decoration: _inputDecoration(
+                          'Nhập địa chỉ trụ sở nhà xuất bản',
+                          Icons.location_on_outlined,
+                        ),
+                        validator: (value) {
+                          if (value != null && value.trim().length > 500) {
+                            return 'Địa chỉ tối đa 500 ký tự.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // CÁC NÚT BẤM DƯỚI CÙNG
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: OutlinedButton(
+                                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Hủy',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            flex: 2,
+                            child: SizedBox(
+                              height: 48,
+                              child: FilledButton.icon(
+                                onPressed: _isSaving ? null : _submit,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0878F9),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                icon: _isSaving
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Icon(
+                                        isEditing
+                                            ? Icons.check_circle_outline_rounded
+                                            : Icons.save_outlined,
+                                        size: 19,
+                                      ),
+                                label: Text(
+                                  _isSaving
+                                      ? 'Đang lưu...'
+                                      : (isEditing ? 'Lưu thay đổi' : 'Lưu nhà xuất bản'),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
-
-              // NÚT LƯU THÔNG TIN (PRM-024 Thêm mới / PRM-025 Cập nhật)
-              SizedBox(
-                height: 50,
-                child: FilledButton.icon(
-                  onPressed: _isSaving ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0878F9),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Icon(isEditing ? Icons.check_circle_outline : Icons.save_outlined),
-                  label: Text(
-                    _isSaving
-                        ? 'Đang lưu...'
-                        : (isEditing ? 'Lưu thay đổi' : 'Lưu nhà xuất bản'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Khung Card nền trắng bọc ngoài các trường nhập liệu
+  /// Khung Card nền trắng bo tròn bọc ngoài các trường nhập liệu
   Widget _buildSectionCard({required List<Widget> children}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x08000000),
+            color: Color(0x06000000),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -314,12 +411,12 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
   /// Tiêu đề nhỏ phía trên mỗi trường nhập liệu
   Widget _buildLabel(String label) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 7),
       child: Text(
         label,
         style: const TextStyle(
           fontWeight: FontWeight.w600,
-          fontSize: 14,
+          fontSize: 13,
           color: Color(0xFF334155),
         ),
       ),
@@ -335,31 +432,31 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
       hintText: hint,
       hintStyle: const TextStyle(
         color: Color(0xFF94A3B8),
-        fontSize: 14,
+        fontSize: 13,
       ),
-      prefixIcon: Icon(icon, color: const Color(0xFF64748B)),
+      prefixIcon: Icon(icon, color: const Color(0xFF64748B), size: 20),
       filled: true,
       fillColor: const Color(0xFFF8FAFC),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Color(0xFF0878F9), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFEF4444)),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
       ),
     );
   }

@@ -5,7 +5,7 @@ import '../models/publisher.dart';
 
 /// Nguyen Duy Khang - CE192012
 /// Service xử lý gọi API kết nối Backend cho chức năng Quản lý nhà xuất bản
-/// Phụ trách PRM-023 (Lấy danh sách, xem chi tiết), PRM-024 (Tạo mới) và PRM-025 (Cập nhật thông tin nhà xuất bản)
+/// Phụ trách PRM-023 (Lấy danh sách, xem chi tiết), PRM-024 (Tạo mới), PRM-025 (Cập nhật) và PRM-026 (Xóa nhà xuất bản)
 class PublisherService {
   // Dio client dùng chung của app (đã tích hợp TokenStorage và AuthInterceptor tự đính kèm JWT)
   final Dio _dio;
@@ -118,7 +118,10 @@ class PublisherService {
         },
       );
 
-      return _parsePublisherList(response.data);
+      // Lọc bỏ các nhà xuất bản đã bị xóa (status INACTIVE) để không hiển thị trên danh sách
+      return _parsePublisherList(response.data)
+          .where((p) => p.status.toUpperCase() != 'INACTIVE')
+          .toList();
     } on DioException catch (error) {
       throw Exception(_errorMessage(error));
     }
@@ -220,10 +223,10 @@ class PublisherService {
   }
 
   // =========================================================
-  // XÓA NHÀ XUẤT BẢN (HỖ TRỢ CHO TOÀN BỘ CRUD)
+  // PRM-026: XÓA NHÀ XUẤT BẢN (DELETE PUBLISHER)
   // =========================================================
 
-  /// Gọi API DELETE /api/publishers/{id} để xóa nhà xuất bản
+  /// Gọi API DELETE /api/publishers/{id} để xóa mềm nhà xuất bản (Backend cập nhật status sang INACTIVE)
   Future<void> deletePublisher(String id) async {
     try {
       await _dio.delete(

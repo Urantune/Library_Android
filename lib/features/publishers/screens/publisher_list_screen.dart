@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/publisher.dart';
 import '../services/publisher_service.dart';
+import '../widgets/publisher_delete_dialog.dart';
 import 'publisher_add_screen.dart';
 import 'publisher_detail_screen.dart';
 
 /// Nguyen Duy Khang - CE192012
-/// Màn hình quản lý danh sách nhà xuất bản (PRM-023: Hiển thị danh sách, PRM-024: Thêm mới, PRM-025: Cập nhật)
+/// Màn hình quản lý danh sách nhà xuất bản (PRM-023: Danh sách, PRM-024: Thêm mới, PRM-025: Cập nhật, PRM-026: Xóa)
 class PublisherListScreen extends StatefulWidget {
   const PublisherListScreen({super.key});
 
@@ -15,7 +16,7 @@ class PublisherListScreen extends StatefulWidget {
 }
 
 /// Nguyen Duy Khang - CE192012
-/// State quản lý vòng đời và trạng thái hiển thị của màn hình danh sách nhà xuất bản
+/// State quản lý vòng đời, tìm kiếm và trạng thái hiển thị của danh sách nhà xuất bản
 class _PublisherListScreenState extends State<PublisherListScreen> {
   // Service gọi API nhà xuất bản
   final PublisherService service = PublisherService();
@@ -23,11 +24,21 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
   // Biến lưu trữ Future chứa danh sách nhà xuất bản tải từ API
   late Future<List<Publisher>> publishersFuture;
 
+  // Controller và từ khóa phục vụ tìm kiếm nhanh nhà xuất bản
+  final TextEditingController _searchController = TextEditingController();
+  String _searchKeyword = '';
+
   @override
   void initState() {
     super.initState();
     // Tự động gọi API lấy danh sách nhà xuất bản khi khởi tạo màn hình (PRM-023)
     publishersFuture = service.getPublishers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   /// Tải lại danh sách nhà xuất bản từ Backend (dùng cho pull-to-refresh và nút reload)
@@ -75,9 +86,48 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
     });
   }
 
+  /// PRM-026: Hiển thị dialog xác nhận xóa nhỏ gọn và gọi API xóa nhà xuất bản
+  Future<void> confirmAndDelete(Publisher publisher) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => PublisherDeleteDialog(publisher: publisher),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        // Gọi API DELETE /api/publishers/{id} để xóa nhà xuất bản (PRM-026)
+        await service.deletePublisher(publisher.id);
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Xóa nhà xuất bản thành công!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        // Tải lại danh sách để nhà xuất bản bị xóa biến mất khỏi màn hình ngay lập tức (PRM-026)
+        refreshPublishers();
+      } catch (error) {
+        if (!mounted) return;
+
+        final message = error.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   /// PRM-023: Chuyển sang màn hình chi tiết nhà xuất bản dựa theo ID được chọn
   void openDetail(String id) {
-    Navigator.push(
+    Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) {
@@ -86,8 +136,8 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
           );
         },
       ),
-    ).then((_) {
-      // Tải lại dữ liệu khi quay về để đảm bảo cập nhật nếu có thay đổi
+    ).then((result) {
+      // Tải lại dữ liệu khi quay về để đảm bảo cập nhật nếu có sửa/xóa từ màn hình chi tiết
       refreshPublishers();
     });
   }
@@ -95,79 +145,135 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      // Nút Floating Action Button tiện lợi để thêm mới nhà xuất bản (PRM-024)
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: openAddPublisher,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Thêm NXB',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: const Color(0xFF0878F9),
-      ),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          // KHU VỰC TIÊU ĐỀ VÀ CÁC NÚT THAO TÁC TRÊN ĐẦU
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
+          // KHU VỰC HEADER: TIÊU ĐỀ & CÁC NÚT THAO TÁC TRÊN ĐẦU
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Nhà xuất bản',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B),
-                        ),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nhà xuất bản',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Quản lý danh sách nhà xuất bản',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 5),
-                      Text(
-                        'Quản lý danh sách nhà xuất bản',
-                        style: TextStyle(
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
 
-                // Nút Thêm mới ở thanh tiêu đề (PRM-024)
-                FilledButton.icon(
-                  onPressed: openAddPublisher,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text(
-                    'Thêm mới',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0878F9),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    // Nút Thêm mới (PRM-024)
+                    FilledButton.icon(
+                      onPressed: openAddPublisher,
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text(
+                        'Thêm mới',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0878F9),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Nút Tải lại danh sách (Refresh)
+                    IconButton(
+                      onPressed: refreshPublishers,
+                      icon: const Icon(Icons.refresh_rounded, color: Color(0xFF475569)),
+                      tooltip: 'Tải lại',
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // THANH TÌM KIẾM NHÀ XUẤT BẢN TIỆN LỢI
+                SizedBox(
+                  height: 42,
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchKeyword = value.trim().toLowerCase();
+                      });
+                    },
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Tìm kiếm theo tên, địa chỉ, email, số điện thoại...',
+                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF64748B)),
+                      suffixIcon: _searchKeyword.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF64748B)),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchKeyword = '';
+                                });
+                              },
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF0878F9), width: 1.5),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-
-                // Nút Tải lại danh sách (Refresh)
-                IconButton(
-                  onPressed: refreshPublishers,
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Tải lại',
                 ),
               ],
             ),
           ),
 
-          // KHU VỰC HIỂN THỊ DANH SÁCH (DÙNG FUTUREBUILDER LẮNG NGHE DỮ LIỆU TỪ API - PRM-023)
+          // KHU VỰC HIỂN THỊ DANH SÁCH (FUTUREBUILDER - PRM-023)
           Expanded(
             child: FutureBuilder<List<Publisher>>(
               future: publishersFuture,
@@ -175,98 +281,308 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
                 // TRẠNG THÁI 1: ĐANG TẢI DỮ LIỆU
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(color: Color(0xFF0878F9)),
                   );
                 }
 
                 // TRẠNG THÁI 2: GẶP LỖI KHI GỌI API
                 if (snapshot.hasError) {
                   return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 45,
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Không thể tải danh sách',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                          onPressed: refreshPublishers,
-                          child: const Text('Thử lại'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                // LẤY DỮ LIỆU DANH SÁCH THỰC TẾ TỪ RESPONSE
-                final publishers = snapshot.data ?? [];
-
-                // TRẠNG THÁI 3: DANH SÁCH TRỐNG
-                if (publishers.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'Chưa có nhà xuất bản nào.',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
-
-                // TRẠNG THÁI 4: HIỂN THỊ DANH SÁCH (CÓ HỖ TRỢ KÉO ĐỂ TẢI LẠI - PULL TO REFRESH)
-                return RefreshIndicator(
-                  onRefresh: refreshPublishers,
-                  child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount: publishers.length,
-                    itemBuilder: (context, index) {
-                      final publisher = publishers[index];
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.apartment),
-                          ),
-                          title: Text(
-                            publisher.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFEE2E2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.error_outline_rounded,
+                              color: Color(0xFFEF4444),
+                              size: 36,
                             ),
                           ),
-                          subtitle: Text(
-                            publisher.address.isEmpty
-                                ? 'Chưa có địa chỉ'
-                                : publisher.address,
+                          const SizedBox(height: 14),
+                          const Text(
+                            'Không thể tải danh sách nhà xuất bản',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B),
+                            ),
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Nút Chỉnh sửa trực tiếp từ danh sách (PRM-025)
-                              IconButton(
-                                tooltip: 'Cập nhật',
-                                icon: const Icon(
-                                  Icons.edit_outlined,
-                                  color: Color(0xFF0878F9),
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  openEditPublisher(publisher);
-                                },
+                          const SizedBox(height: 6),
+                          Text(
+                            snapshot.error.toString().replaceFirst('Exception: ', ''),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: refreshPublishers,
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: const Text('Thử lại'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0878F9),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              const Icon(Icons.chevron_right, color: Colors.grey),
-                            ],
+                            ),
                           ),
-                          // Chạm vào item để xem chi tiết nhà xuất bản (PRM-023)
-                          onTap: () {
-                            openDetail(publisher.id);
-                          },
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                // LẤY DỮ LIỆU DANH SÁCH THỰC TẾ
+                final allPublishers = snapshot.data ?? [];
+
+                // Lọc theo từ khóa tìm kiếm
+                final filteredPublishers = allPublishers.where((p) {
+                  if (_searchKeyword.isEmpty) return true;
+                  final name = p.name.toLowerCase();
+                  final address = p.address.toLowerCase();
+                  final email = p.email.toLowerCase();
+                  final phone = p.phone.toLowerCase();
+                  return name.contains(_searchKeyword) ||
+                      address.contains(_searchKeyword) ||
+                      email.contains(_searchKeyword) ||
+                      phone.contains(_searchKeyword);
+                }).toList();
+
+                // TRẠNG THÁI 3: DANH SÁCH TRỐNG
+                if (filteredPublishers.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.apartment_rounded,
+                              color: Color(0xFF94A3B8),
+                              size: 40,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            _searchKeyword.isNotEmpty
+                                ? 'Không tìm thấy nhà xuất bản phù hợp'
+                                : 'Chưa có nhà xuất bản nào',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _searchKeyword.isNotEmpty
+                                ? 'Hãy thử tìm kiếm với từ khóa khác'
+                                : 'Nhấn nút "Thêm mới" để tạo nhà xuất bản đầu tiên',
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                // TRẠNG THÁI 4: HIỂN THỊ DANH SÁCH ĐẸP MẮT, RÕ RÀNG (PRM-023)
+                return RefreshIndicator(
+                  onRefresh: refreshPublishers,
+                  color: const Color(0xFF0878F9),
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    itemCount: filteredPublishers.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final publisher = filteredPublishers[index];
+
+                      return Material(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => openDetail(publisher.id),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                // Icon đại diện NXB tròn nền xanh nhạt
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.apartment_rounded,
+                                    color: Color(0xFF0878F9),
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+
+                                // Thông tin tên và chi tiết
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        publisher.name,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // Địa chỉ
+                                      if (publisher.address.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(bottom: 2),
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.location_on_outlined,
+                                                size: 14,
+                                                color: Color(0xFF64748B),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  publisher.address,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    color: Color(0xFF64748B),
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                      // Số điện thoại & Email
+                                      Row(
+                                        children: [
+                                          if (publisher.phone.isNotEmpty) ...[
+                                            const Icon(
+                                              Icons.phone_outlined,
+                                              size: 13,
+                                              color: Color(0xFF94A3B8),
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              publisher.phone,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF64748B),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                          ],
+                                          if (publisher.email.isNotEmpty) ...[
+                                            const Icon(
+                                              Icons.email_outlined,
+                                              size: 13,
+                                              color: Color(0xFF94A3B8),
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Expanded(
+                                              child: Text(
+                                                publisher.email,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Các nút hành động: Sửa, Xóa và Mũi tên
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Nút Chỉnh sửa (PRM-025)
+                                    IconButton(
+                                      tooltip: 'Sửa',
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        color: Color(0xFF0878F9),
+                                        size: 19,
+                                      ),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: const Color(0xFFF1F5F9),
+                                        padding: const EdgeInsets.all(8),
+                                        minimumSize: const Size(36, 36),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      onPressed: () => openEditPublisher(publisher),
+                                    ),
+                                    const SizedBox(width: 6),
+
+                                    // Nút Xóa (PRM-026)
+                                    IconButton(
+                                      tooltip: 'Xóa',
+                                      icon: const Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: Color(0xFFEF4444),
+                                        size: 19,
+                                      ),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: const Color(0xFFFEE2E2),
+                                        padding: const EdgeInsets.all(8),
+                                        minimumSize: const Size(36, 36),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      onPressed: () => confirmAndDelete(publisher),
+                                    ),
+                                    const SizedBox(width: 6),
+
+                                    // Icon điều hướng xem chi tiết
+                                    const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: Color(0xFFCBD5E1),
+                                      size: 22,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
