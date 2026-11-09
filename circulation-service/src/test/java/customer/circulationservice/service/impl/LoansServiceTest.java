@@ -229,6 +229,42 @@ class LoansServiceTest {
                 .isEqualTo(ErrorCode.LOAN_NOT_APPROVABLE);
     }
 
+    @Test
+    void rejectingRequestedLoanRecordsDecisionAndReason() {
+        Loans loan = new Loans();
+        loan.setId("loan-to-reject");
+        loan.setUserId(USER_ID);
+        loan.setStatus("REQUESTED");
+        loan.setUpdatedAt("old-timestamp");
+        when(loansRepository.findById(loan.getId())).thenReturn(Optional.of(loan));
+        when(loansRepository.save(loan)).thenAnswer(invocation -> invocation.getArgument(0));
+        when(loanItemsRepository.findByLoanIdOrderByIdAsc(loan.getId())).thenReturn(List.of());
+        when(loansMapper.toResponse(loan)).thenAnswer(invocation ->
+                LoanResponseDTO.builder().id(loan.getId()).status(loan.getStatus()).build());
+
+        LoanResponseDTO result = service.rejectLoan(loan.getId(), "admin-1", "  Unavailable  ");
+
+        assertThat(loan.getStatus()).isEqualTo("REJECTED");
+        assertThat(loan.getProcessedBy()).isEqualTo("admin-1");
+        assertThat(loan.getRejectionReason()).isEqualTo("Unavailable");
+        assertThat(loan.getUpdatedAt()).isNotEqualTo("old-timestamp");
+        assertThat(result.getStatus()).isEqualTo("REJECTED");
+        verify(loansRepository).save(loan);
+    }
+
+    @Test
+    void rejectsLoanRejectionWhenLoanIsNotRequested() {
+        Loans loan = new Loans();
+        loan.setId("loan-already-borrowed");
+        loan.setStatus("BORROWED");
+        when(loansRepository.findById(loan.getId())).thenReturn(Optional.of(loan));
+
+        assertThatThrownBy(() -> service.rejectLoan(loan.getId(), "admin-1", "Unavailable"))
+                .isInstanceOf(AppException.class)
+                .extracting(exception -> ((AppException) exception).getErrorCode())
+                .isEqualTo(ErrorCode.LOAN_NOT_REJECTABLE);
+    }
+
     private UserDto user(String id, String status) {
         return new UserDto(id, "reader", "reader@example.test", "Reader", null,
                 "USER", status, null, null);

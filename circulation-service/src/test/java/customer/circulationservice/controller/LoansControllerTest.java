@@ -1,5 +1,6 @@
 package customer.circulationservice.controller;
 
+import customer.circulationservice.dto.request.RejectLoanRequestDTO;
 import customer.circulationservice.dto.response.PageDTO;
 import customer.circulationservice.dto.response.LoanResponseDTO;
 import customer.circulationservice.exception.AppException;
@@ -76,6 +77,32 @@ class LoansControllerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody().getResult().getStatus()).isEqualTo("BORROWED");
         verify(loansService).approveLoan("loan-1", "admin-1");
+    }
+
+    @Test
+    void deniesLoanRejectionToNonAdmin() {
+        assertThatThrownBy(() -> controller.rejectLoan("loan-1", null, "user-1", "USER"))
+                .isInstanceOf(AppException.class)
+                .extracting(exception -> ((AppException) exception).getErrorCode())
+                .isEqualTo(ErrorCode.ADMIN_ACCESS_DENIED);
+
+        verifyNoInteractions(loansService);
+    }
+
+    @Test
+    void adminRejectionPassesTrustedAdminIdAndReasonToService() {
+        LoanResponseDTO loan = LoanResponseDTO.builder().id("loan-1").status("REJECTED").build();
+        when(loansService.rejectLoan("loan-1", "admin-1", "Unavailable")).thenReturn(loan);
+        var request = new RejectLoanRequestDTO();
+        request.setReason("Unavailable");
+
+        var response = controller.rejectLoan(
+                "loan-1", request, "admin-1", "ADMIN");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().getMessage()).isEqualTo("Loan request rejected");
+        assertThat(response.getBody().getResult().getStatus()).isEqualTo("REJECTED");
+        verify(loansService).rejectLoan("loan-1", "admin-1", "Unavailable");
     }
 
     @Test
