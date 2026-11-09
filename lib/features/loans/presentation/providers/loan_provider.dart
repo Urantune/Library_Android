@@ -39,7 +39,14 @@ final adminLoansProvider =
 
 final loanUserDetailsProvider =
     FutureProvider.family<user_entity.User, String>((ref, userId) {
-  return UserRemoteDataSource().getUserById(userId);
+  const configuredUrl = String.fromEnvironment('USER_API_BASE_URL');
+  final baseUrl = configuredUrl.isNotEmpty
+      ? configuredUrl
+      : !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+          ? 'http://10.0.2.2:8081'
+          : 'http://localhost:8081';
+  final dio = ApiClient.create(baseUrl: baseUrl);
+  return UserRemoteDataSource(dio: dio).getUserById(userId);
 });
 
 final loanBookListProvider = FutureProvider<List<Book>>((ref) {
