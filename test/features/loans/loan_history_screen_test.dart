@@ -84,6 +84,24 @@ class _FakeLoanRemoteDataSource implements LoanRemoteDataSource {
       ],
     );
   }
+
+  @override
+  Future<LoanResponseDTO> approveLoan({required String loanId, required String adminUserId, required String userRoles}) {
+    // TODO: implement approveLoan
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PageDTO<LoanResponseDTO>> getAllLoans({String? userRoles, int page = 0, int size = 20}) {
+    // TODO: implement getAllLoans
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LoanResponseDTO> rejectLoan({required String loanId, required String adminUserId, required String userRoles, String? reason}) {
+    // TODO: implement rejectLoan
+    throw UnimplementedError();
+  }
 }
 
 void main() {
