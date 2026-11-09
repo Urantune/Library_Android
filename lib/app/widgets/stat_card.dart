@@ -50,10 +50,10 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             item.change,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: item.changeColor ?? AppColors.green,
+              color: AppColors.green,
             ),
           ),
         ],

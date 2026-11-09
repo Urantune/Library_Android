@@ -1,31 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/auth/user_role.dart';
 import '../../features/notifications/presentation/screens/notification_list_screen.dart';
-import '../../features/sign/controllers/auth_controller.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
 import '../providers/navigation_provider.dart';
 import '../theme/app_colors.dart';
 
-class TopBar extends ConsumerWidget {
+class TopBar extends StatelessWidget {
   const TopBar({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final nav = context.watch<NavigationProvider>();
     // Thanh tìm kiếm toàn cục chỉ hiện trên trang chủ (dashboard + bottom nav index 0).
     // Các tab khác đã có thanh tìm kiếm riêng theo chức năng.
     final showSearch =
         nav.selectedIndex == NavIndex.dashboard && nav.bottomNavIndex == 0;
-
-    final currentUser = ref.watch(authControllerProvider).user;
-    final role = UserRole.fromRoles(currentUser?.roles ?? const ['MEMBER']);
-    final displayName = (currentUser?.fullName.trim().isNotEmpty ?? false)
-        ? currentUser!.fullName.trim()
-        : 'Người dùng';
-    final initial = displayName.substring(0, 1).toUpperCase();
 
     return Container(
       height: 72,
@@ -82,16 +72,10 @@ class TopBar extends ConsumerWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
-            child: CircleAvatar(
+            child: const CircleAvatar(
               radius: 18,
-              backgroundColor: const Color(0xFFDCE6FA),
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              backgroundColor: Color(0xFFDCE6FA),
+              child: Icon(Icons.person, color: AppColors.primary),
             ),
           ),
           const SizedBox(width: 10),
@@ -100,21 +84,20 @@ class TopBar extends ConsumerWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
-            child: Column(
+            child: const Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  displayName,
-                  style: const TextStyle(
+                  'Nguyễn Văn A',
+                  style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textDark),
                 ),
                 Text(
-                  role.label,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.textGrey),
+                  'Thủ thư',
+                  style: TextStyle(fontSize: 11, color: AppColors.textGrey),
                 ),
               ],
             ),

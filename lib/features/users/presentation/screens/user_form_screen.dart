@@ -19,7 +19,6 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   late TextEditingController _emailController;
   late TextEditingController _fullNameController;
   late TextEditingController _phoneController;
-  late TextEditingController _passwordController;
   String _selectedRole = 'USER';
   bool _isSubmitting = false;
 
@@ -34,7 +33,6 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _fullNameController =
         TextEditingController(text: widget.user?.fullName ?? '');
     _phoneController = TextEditingController(text: widget.user?.phone ?? '');
-    _passwordController = TextEditingController();
     _selectedRole = widget.user?.role ?? 'USER';
   }
 
@@ -44,7 +42,6 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _emailController.dispose();
     _fullNameController.dispose();
     _phoneController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
@@ -137,24 +134,6 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      if (!isEditing) ...[
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Mật khẩu *',
-                            prefixIcon: Icon(Icons.lock_outline),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.length < 8) {
-                              return 'Mật khẩu cần ít nhất 8 ký tự';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         value: _selectedRole,
@@ -230,10 +209,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       if (isEditing) {
         await ref.read(userRepositoryProvider).updateUser(user);
       } else {
-        await ref.read(userRepositoryProvider).createUser(
-              user,
-              password: _passwordController.text,
-            );
+        await ref.read(userRepositoryProvider).createUser(user);
       }
 
       ref.invalidate(userListProvider);
