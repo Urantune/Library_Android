@@ -8,7 +8,7 @@ import customer.reservationservice.entity.IdempotencyRecordEntity;
 import customer.reservationservice.entity.ReservationEntity;
 import customer.reservationservice.entity.ReservationOperationEntity;
 import customer.reservationservice.repository.ReservationOperationRepository;
-import customer.reservationservice.repository.ReservationRepository;
+import customer.reservationservice.repository.ReservationEntityRepository;
 import customer.reservationservice.repository.IdempotencyRecordRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +33,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class ReservationExpiryJob {
     private static final Logger log = LoggerFactory.getLogger(ReservationExpiryJob.class);
 
-    private final ReservationRepository reservations;
+    private final ReservationEntityRepository reservations;
     private final ReservationOperationRepository operations;
     private final CatalogInventoryClient catalogClient;
     private final CirculationLoanClient circulationClient;
@@ -44,7 +44,7 @@ public class ReservationExpiryJob {
     private final boolean jobsEnabled;
 
     public ReservationExpiryJob(
-            ReservationRepository reservations,
+            ReservationEntityRepository reservations,
             ReservationOperationRepository operations,
             CatalogInventoryClient catalogClient,
             CirculationLoanClient circulationClient,

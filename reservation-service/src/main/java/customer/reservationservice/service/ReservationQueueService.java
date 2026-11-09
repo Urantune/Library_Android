@@ -14,7 +14,7 @@ import customer.reservationservice.entity.ReservationOperationEntity;
 import customer.reservationservice.repository.OutboxEventRepository;
 import customer.reservationservice.repository.ProcessedEventRepository;
 import customer.reservationservice.repository.ReservationOperationRepository;
-import customer.reservationservice.repository.ReservationRepository;
+import customer.reservationservice.repository.ReservationEntityRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -37,7 +37,7 @@ public class ReservationQueueService {
     public static final String TOPIC_RESERVATION_READY = "library.reservation.ready.v1";
     public static final String CONSUMER_GROUP_COPY_AVAILABLE = "reservation-copy-available-v1";
 
-    private final ReservationRepository reservations;
+    private final ReservationEntityRepository reservations;
     private final OutboxEventRepository outboxEvents;
     private final ProcessedEventRepository processedEvents;
     private final ReservationOperationRepository operations;
@@ -51,7 +51,7 @@ public class ReservationQueueService {
     private final ConcurrentHashMap<String, Object> bookLocks = new ConcurrentHashMap<>();
 
     public ReservationQueueService(
-            ReservationRepository reservations,
+            ReservationEntityRepository reservations,
             OutboxEventRepository outboxEvents,
             ProcessedEventRepository processedEvents,
             ReservationOperationRepository operations,
@@ -300,7 +300,7 @@ public class ReservationQueueService {
         }
     }
 
-    static String deterministicUuid(String seed) {
+    public static String deterministicUuid(String seed) {
         return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
