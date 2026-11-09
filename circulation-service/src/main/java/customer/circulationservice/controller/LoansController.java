@@ -22,12 +22,47 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
+
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/loans")
 public class LoansController {
     ILoansService loansService;
+
+    @PostMapping("/admin/{loanId}/approve")
+    public ResponseEntity<ResponseAPI<LoanResponseDTO>> approveLoan(
+            @PathVariable String loanId,
+            @RequestHeader(value = "X-User-Id", required = false) String adminUserId,
+            @RequestHeader(value = "X-User-Roles", required = false) String currentUserRoles) {
+        verifyAdmin(currentUserRoles);
+        LoanResponseDTO result = loansService.approveLoan(loanId, adminUserId);
+        return ResponseEntity.ok(
+                ResponseAPI.<LoanResponseDTO>builder()
+                        .message("Loan approved and marked as borrowed")
+                        .timestamp(Instant.now().toString())
+                        .result(result)
+                        .build());
+    }
+
+
+
+    @GetMapping("/admin")
+    public ResponseEntity<ResponseAPI<PageDTO<LoanResponseDTO>>> getAllLoans(
+            @RequestHeader(value = "X-User-Roles", required = false) String currentUserRoles,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        verifyAdmin(currentUserRoles);
+        validatePage(page, size);
+        PageDTO<LoanResponseDTO> result = loansService.getAllLoans(page, size);
+        return ResponseEntity.ok(
+                ResponseAPI.<PageDTO<LoanResponseDTO>>builder()
+                        .message("All loans")
+                        .timestamp(Instant.now().toString())
+                        .result(result)
+                        .build());
+    }
 
     @GetMapping("/users/{userId}/borrowed")
     public ResponseEntity<ResponseAPI<PageDTO<LoanResponseDTO>>> getBorrowedLoans(
@@ -41,6 +76,23 @@ public class LoansController {
         return ResponseEntity.ok(
                 ResponseAPI.<PageDTO<LoanResponseDTO>>builder()
                         .message("Current borrowed books")
+                        .timestamp(Instant.now().toString())
+                        .result(result)
+                        .build());
+    }
+
+    @GetMapping("/users/{userId}/requested")
+    public ResponseEntity<ResponseAPI<PageDTO<LoanResponseDTO>>> getRequestedLoans(
+            @PathVariable String userId,
+            @RequestHeader("X-User-Id") String currentUserId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        verifyOwner(userId, currentUserId);
+        validatePage(page, size);
+        PageDTO<LoanResponseDTO> result = loansService.getRequestedLoans(userId, page, size);
+        return ResponseEntity.ok(
+                ResponseAPI.<PageDTO<LoanResponseDTO>>builder()
+                        .message("Requested loans")
                         .timestamp(Instant.now().toString())
                         .result(result)
                         .build());
@@ -78,6 +130,15 @@ public class LoansController {
     private void verifyOwner(String userId, String currentUserId) {
         if (!userId.equals(currentUserId)) {
             throw new AppException(ErrorCode.LOAN_ACCESS_DENIED);
+        }
+    }
+
+    private void verifyAdmin(String currentUserRoles) {
+        boolean isAdmin = currentUserRoles != null && Arrays.stream(currentUserRoles.split(","))
+                .map(String::trim)
+                .anyMatch("ADMIN"::equals);
+        if (!isAdmin) {
+            throw new AppException(ErrorCode.ADMIN_ACCESS_DENIED);
         }
     }
 

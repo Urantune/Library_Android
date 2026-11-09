@@ -48,7 +48,7 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
         String path = request.getURI().getRawPath();
         boolean identityPath = path.startsWith("/api/users") || path.startsWith("/identity/api/users");
         boolean circulationPath = path.matches(
-                "^/(?:circulation|api/circulation)/api/(?:loans(?:/users/[^/]+/(?:borrowed|history))?|loan-renewals)$");
+                "^/(?:circulation|api/circulation)/api/(?:loans(?:/admin(?:/[^/]+/approve)?|/users/[^/]+/(?:borrowed|history|requested))?|loan-renewals)$");
         boolean reservationPath = path.matches("^/(?:reservation|api/reservation)/api/reservations$");
         if (!identityPath && !circulationPath && !reservationPath) return chain.filter(exchange);
 
@@ -80,7 +80,16 @@ public class UserJwtRbacFilter implements GlobalFilter, Ordered {
             boolean renewalRequest = path.matches(
                     "^/(?:circulation|api/circulation)/api/loan-renewals$")
                     && method.equals("POST");
-            allowedOperation = !claims.roles().isEmpty() && (loanRead || loanRequest || renewalRequest);
+            boolean adminLoanList = path.matches(
+                    "^/(?:circulation|api/circulation)/api/loans/admin$")
+                    && method.equals("GET")
+                    && claims.roles().contains("ADMIN");
+            boolean adminLoanApproval = path.matches(
+                    "^/(?:circulation|api/circulation)/api/loans/admin/[^/]+/approve$")
+                    && method.equals("POST")
+                    && claims.roles().contains("ADMIN");
+            allowedOperation = adminLoanList || adminLoanApproval
+                    || !claims.roles().isEmpty() && (loanRead || loanRequest || renewalRequest);
         } else {
             allowedOperation = !claims.roles().isEmpty() && method.equals("POST");
         }

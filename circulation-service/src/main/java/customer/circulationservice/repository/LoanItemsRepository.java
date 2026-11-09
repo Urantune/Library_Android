@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 public interface LoanItemsRepository extends JpaRepository <LoanItems, String> {
     java.util.List<LoanItems> findByLoanIdOrderByIdAsc(String loanId);
 
+    java.util.List<LoanItems> findByLoanIdInOrderByIdAsc(java.util.Collection<String> loanIds);
+
     java.util.List<LoanItems> findByLoanIdInAndItemStatusOrderByIdAsc(
             java.util.Collection<String> loanIds, String itemStatus);
 }

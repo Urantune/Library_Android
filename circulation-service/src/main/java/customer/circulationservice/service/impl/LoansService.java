@@ -71,13 +71,66 @@ public class LoansService implements ILoansService {
     public PageDTO<LoanResponseDTO> getBorrowedLoans(String userId, int page, int size) {
         Page<Loans> loans = loansRepository.findBorrowedLoans(
                 userId, List.of("BORROWED", "OVERDUE"), "BORROWED", PageRequest.of(page, size));
+        return toLoanPage(loans, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageDTO<LoanResponseDTO> getRequestedLoans(String userId, int page, int size) {
+        Page<Loans> loans = loansRepository.findByUserIdAndStatusOrderByRequestedAtDesc(
+                userId, "REQUESTED", PageRequest.of(page, size));
+        return toLoanPage(loans, false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageDTO<LoanResponseDTO> getAllLoans(int page, int size) {
+        Page<Loans> loans = loansRepository.findAllByOrderByRequestedAtDesc(PageRequest.of(page, size));
+        return toLoanPage(loans, false);
+    }
+
+    @Override
+    @Transactional
+    public LoanResponseDTO approveLoan(String loanId, String adminUserId) {
+        if (adminUserId == null || adminUserId.isBlank()) {
+            throw new AppException(ErrorCode.BAD_REQUEST);
+        }
+
+        Loans loan = loansRepository.findById(loanId)
+                .orElseThrow(() -> new AppException(ErrorCode.LOAN_NOT_FOUND));
+        if (!"REQUESTED".equals(loan.getStatus())) {
+            throw new AppException(ErrorCode.LOAN_NOT_APPROVABLE);
+        }
+
+        List<LoanItems> items = loanItemsRepository.findByLoanIdOrderByIdAsc(loanId);
+        if (items.isEmpty() || items.stream().anyMatch(item -> !"REQUESTED".equals(item.getItemStatus()))) {
+            throw new AppException(ErrorCode.LOAN_NOT_APPROVABLE);
+        }
+
+        String now = Instant.now().toString();
+        loan.setStatus("BORROWED");
+        loan.setApprovedAt(now);
+        loan.setBorrowedAt(now);
+        loan.setProcessedBy(adminUserId);
+        loan.setUpdatedAt(now);
+        items.forEach(item -> item.setItemStatus("BORROWED"));
+
+        Loans savedLoan = loansRepository.save(loan);
+        List<LoanItems> savedItems = loanItemsRepository.saveAll(items);
+        return toResponse(savedLoan, savedItems);
+    }
+
+    private PageDTO<LoanResponseDTO> toLoanPage(Page<Loans> loans, boolean borrowedItemsOnly) {
         List<String> loanIds = loans.getContent().stream()
                 .map(Loans::getId)
                 .toList();
-        Map<String, List<LoanItems>> itemsByLoanId = loanIds.isEmpty()
-                ? Map.of()
-                : loanItemsRepository.findByLoanIdInAndItemStatusOrderByIdAsc(loanIds, "BORROWED").stream()
-                        .collect(Collectors.groupingBy(LoanItems::getLoanId));
+        List<LoanItems> items = loanIds.isEmpty()
+                ? List.of()
+                : borrowedItemsOnly
+                        ? loanItemsRepository.findByLoanIdInAndItemStatusOrderByIdAsc(loanIds, "BORROWED")
+                        : loanItemsRepository.findByLoanIdInOrderByIdAsc(loanIds);
+        Map<String, List<LoanItems>> itemsByLoanId = items.stream()
+                .collect(Collectors.groupingBy(LoanItems::getLoanId));
         List<LoanResponseDTO> content = loans.getContent().stream()
                 .map(loan -> toResponse(loan, itemsByLoanId.getOrDefault(loan.getId(), List.of())))
                 .toList();

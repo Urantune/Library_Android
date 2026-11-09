@@ -34,5 +34,10 @@ public interface LoansRepository extends JpaRepository<Loans, String> {
             @Param("itemStatus") String itemStatus,
             Pageable pageable);
 
+    Page<Loans> findAllByOrderByRequestedAtDesc(Pageable pageable);
+
+    Page<Loans> findByUserIdAndStatusOrderByRequestedAtDesc(
+            String userId, String status, Pageable pageable);
+
     Page<Loans> findByUserIdOrderByRequestedAtDesc(String userId, Pageable pageable);
 }
