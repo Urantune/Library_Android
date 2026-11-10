@@ -11,9 +11,9 @@ class BookRepositoryImpl implements BookRepository {
   Future<List<Book>> getBooks() => _remote.getBooks();
   @override
   Future<BookPage> getBookPage({int page = 0, int size = 10, String? query,
-      String? publisherId, String? authorId, String? categoryId}) =>
+      String? publisherId, String? authorId, String? categoryId, String? copyStatus}) =>
       _remote.getBookPage(page: page, size: size, query: query,
-          publisherId: publisherId, authorId: authorId, categoryId: categoryId);
+          publisherId: publisherId, authorId: authorId, categoryId: categoryId, copyStatus: copyStatus);
   @override
   Future<Book> getBookById(String id) => _remote.getBookById(id);
   @override

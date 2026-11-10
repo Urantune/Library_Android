@@ -21,8 +21,6 @@ class BookCopiesSection extends ConsumerWidget {
             OutlinedButton.icon(onPressed: () => _add(context, ref), icon: const Icon(Icons.add), label: const Text('Thêm cuốn')),
           ]),
           const SizedBox(height: 8),
-          const Text('Mỗi cuốn có một mã riêng. Cuốn đang mượn hoặc được giữ sẽ do hệ thống mượn trả quản lý.', style: TextStyle(color: Colors.black54)),
-          const SizedBox(height: 12),
           copies.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
             error: (_, __) => Row(children: [const Expanded(child: Text('Không tải được danh sách cuốn.')), TextButton(onPressed: () => ref.invalidate(bookCopiesProvider(bookId)), child: const Text('Thử lại'))]),
@@ -41,7 +39,7 @@ class BookCopiesSection extends ConsumerWidget {
 
   Widget _tile(BuildContext context, WidgetRef ref, BookCopy copy) {
     final status = switch (copy.status) {
-      'AVAILABLE' => 'Có sẵn', 'BORROWED' => 'Đang mượn', 'RESERVED' => 'Đang giữ',
+      'AVAILABLE' => 'Có sẵn', 'BORROWED' => 'Đã cho mượn', 'RESERVED' => 'Đang giữ',
       'DAMAGED' => 'Hư hỏng', 'LOST' => 'Đã mất', _ => copy.status,
     };
     final canEdit = {'AVAILABLE', 'DAMAGED', 'LOST'}.contains(copy.status);

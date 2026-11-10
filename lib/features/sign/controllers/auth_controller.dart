@@ -108,6 +108,12 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  void updateFullName(String fullName) {
+    final user = state.user;
+    if (user == null) return;
+    state = AuthState(user: User(id: user.id, fullName: fullName, email: user.email, roles: user.roles, status: user.status));
+  }
+
   void clearError() {
     state = AuthState(
         user: state.user,

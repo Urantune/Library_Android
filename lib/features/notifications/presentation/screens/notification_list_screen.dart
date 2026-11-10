@@ -1,254 +1,88 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/notification_api.dart';
+import '../providers/notification_provider.dart';
 
-class NotificationItem {
-  final String id;
-  final String title;
-  final String message;
-  final DateTime timestamp;
-  final bool isRead;
-  final String type;
-
-  const NotificationItem({
-    required this.id,
-    required this.title,
-    required this.message,
-    required this.timestamp,
-    this.isRead = false,
-    this.type = 'info',
-  });
-}
-
-class NotificationListScreen extends StatefulWidget {
+class NotificationListScreen extends ConsumerStatefulWidget {
   const NotificationListScreen({super.key});
-
   @override
-  State<NotificationListScreen> createState() => _NotificationListScreenState();
+  ConsumerState<NotificationListScreen> createState() => _NotificationListScreenState();
 }
 
-class _NotificationListScreenState extends State<NotificationListScreen> {
-  final List<NotificationItem> _notifications = [
-    NotificationItem(
-      id: 'noti-001',
-      title: 'Sách sắp đến hạn trả',
-      message: 'Cuốn "Dế Mèn phiêu lưu ký" sẽ đến hạn trả vào ngày 20/10/2026.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      type: 'warning',
-    ),
-    NotificationItem(
-      id: 'noti-002',
-      title: 'Đặt trước thành công',
-      message: 'Bạn đã đặt trước cuốn "Nhà giả kim" thành công.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 5)),
-      isRead: true,
-      type: 'success',
-    ),
-    NotificationItem(
-      id: 'noti-003',
-      title: 'Hệ thống bảo trì',
-      message: 'Hệ thống sẽ bảo trì vào ngày 15/10/2026 từ 22:00 - 23:00.',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      isRead: true,
-      type: 'info',
-    ),
-    NotificationItem(
-      id: 'noti-004',
-      title: 'Quá hạn trả sách',
-      message: 'Cuốn "Clean Code" đã quá hạn 3 ngày. Vui lòng trả sách sớm nhất.',
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
-      type: 'error',
-    ),
-  ];
+class _NotificationListScreenState extends ConsumerState<NotificationListScreen> {
+  NotificationApi get _api => ref.read(notificationApiProvider);
+  late Future<NotificationPage> _request;
+  int _page = 0;
+  bool _unreadOnly = false;
+  bool _updating = false;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        title: const Text(
-          'Thông báo',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                for (var i = 0; i < _notifications.length; i++) {
-                  _notifications[i] = NotificationItem(
-                    id: _notifications[i].id,
-                    title: _notifications[i].title,
-                    message: _notifications[i].message,
-                    timestamp: _notifications[i].timestamp,
-                    isRead: true,
-                    type: _notifications[i].type,
-                  );
-                }
-              });
+  void initState() {
+    super.initState();
+    _request = _api.list(page: _page, unreadOnly: _unreadOnly);
+  }
+
+  Future<void> _reload() async {
+    final request = _api.list(page: _page, unreadOnly: _unreadOnly);
+    setState(() { _request = request; });
+    try { await request; } catch (_) {}
+  }
+
+  Future<void> _markRead(AppNotification? item) async {
+    if (_updating || (item?.isRead ?? false)) return;
+    setState(() => _updating = true);
+    try {
+      if (item == null) { await _api.markAllRead(); } else { await _api.markRead(item.id); }
+      ref.invalidate(unreadNotificationCountProvider);
+      if (mounted) { _page = 0; await _reload(); }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không thể cập nhật thông báo. Vui lòng thử lại.')));
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: const Color(0xFFF5F7FB),
+    appBar: AppBar(title: const Text('Thông báo'), backgroundColor: Colors.white, actions: [
+      TextButton(onPressed: _updating ? null : () => _markRead(null), child: const Text('Đọc tất cả')),
+    ]),
+    body: Column(children: [
+      Padding(padding: const EdgeInsets.all(16), child: Align(alignment: Alignment.centerLeft, child: FilterChip(
+        label: const Text('Chưa đọc'), selected: _unreadOnly,
+        onSelected: (value) { _unreadOnly = value; _page = 0; _reload(); },
+      ))),
+      Expanded(child: FutureBuilder<NotificationPage>(future: _request, builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) { return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Không tải được thông báo.'), TextButton(onPressed: _reload, child: const Text('Thử lại')),
+        ])); }
+        final result = snapshot.requireData;
+        if (result.items.isEmpty) return Center(child: Text(_unreadOnly ? 'Không có thông báo chưa đọc.' : 'Chưa có thông báo.'));
+        return Column(children: [
+          Expanded(child: RefreshIndicator(onRefresh: _reload, child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: result.items.length, itemBuilder: (context, index) {
+              final item = result.items[index];
+              return Card(color: Colors.white, child: ListTile(
+                leading: Icon(item.isRead ? Icons.notifications_none : Icons.notifications_active_outlined, color: item.isRead ? Colors.grey : Colors.blue),
+                title: Text(item.title, style: TextStyle(fontWeight: item.isRead ? FontWeight.normal : FontWeight.bold)),
+                subtitle: Text([item.body, if (item.createdAt != null) _date(item.createdAt!)].where((s) => s.isNotEmpty).join('\n')),
+                isThreeLine: item.createdAt != null,
+                onTap: _updating || item.isRead ? null : () => _markRead(item),
+              ));
             },
-            child: const Text('Đọc tất cả'),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(milliseconds: 500));
-        },
-        child: ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: _notifications.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final item = _notifications[index];
-            return _NotificationCard(
-              item: item,
-              onTap: () {
-                setState(() {
-                  _notifications[index] = NotificationItem(
-                    id: item.id,
-                    title: item.title,
-                    message: item.message,
-                    timestamp: item.timestamp,
-                    isRead: true,
-                    type: item.type,
-                  );
-                });
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
+          ))),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            IconButton(tooltip: 'Trang trước', onPressed: _page > 0 ? () { _page--; _reload(); } : null, icon: const Icon(Icons.chevron_left)),
+            Text('Trang ${_page + 1}/${result.totalPages}'),
+            IconButton(tooltip: 'Trang sau', onPressed: _page + 1 < result.totalPages ? () { _page++; _reload(); } : null, icon: const Icon(Icons.chevron_right)),
+          ]),
+        ]);
+      })),
+    ]),
+  );
 
-class _NotificationCard extends StatelessWidget {
-  final NotificationItem item;
-  final VoidCallback onTap;
-
-  const _NotificationCard({required this.item, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    IconData iconData;
-    Color iconColor;
-    Color iconBgColor;
-
-    switch (item.type) {
-      case 'warning':
-        iconData = Icons.warning_amber_rounded;
-        iconColor = const Color(0xFFF59E0B);
-        iconBgColor = const Color(0xFFFEF3C7);
-        break;
-      case 'success':
-        iconData = Icons.check_circle_outline;
-        iconColor = const Color(0xFF16A34A);
-        iconBgColor = const Color(0xFFE2F6E9);
-        break;
-      case 'error':
-        iconData = Icons.error_outline;
-        iconColor = const Color(0xFFEF4444);
-        iconBgColor = const Color(0xFFFFE9E7);
-        break;
-      default:
-        iconData = Icons.info_outline;
-        iconColor = const Color(0xFF2563EB);
-        iconBgColor = const Color(0xFFDBEAFE);
-    }
-
-    return Card(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: item.isRead
-              ? const Color(0xFFE6EAF0)
-              : const Color(0xFF2563EB).withOpacity(0.3),
-          width: item.isRead ? 1 : 1.5,
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(iconData, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              fontWeight: item.isRead
-                                  ? FontWeight.w500
-                                  : FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        if (!item.isRead)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF2563EB),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.message,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _formatTimestamp(item.timestamp),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final diff = now.difference(timestamp);
-
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} phút trước';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours} giờ trước';
-    } else {
-      return '${diff.inDays} ngày trước';
-    }
-  }
+  String _date(DateTime date) => '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 }

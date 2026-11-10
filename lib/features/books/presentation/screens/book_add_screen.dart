@@ -382,7 +382,7 @@ class _BookAddScreenState extends ConsumerState<BookAddScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(SnackBar(content: Text(error is StateError ? error.message : 'Không thể lưu sách. Vui lòng kiểm tra thông tin hoặc kết nối.')));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

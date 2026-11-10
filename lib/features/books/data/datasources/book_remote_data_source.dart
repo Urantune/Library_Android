@@ -34,6 +34,7 @@ class BookRemoteDataSource {
     String? publisherId,
     String? authorId,
     String? categoryId,
+    String? copyStatus,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/api/books',
@@ -44,6 +45,7 @@ class BookRemoteDataSource {
         if (publisherId != null && publisherId.trim().isNotEmpty) 'publisherId': publisherId.trim(),
         if (authorId != null && authorId.trim().isNotEmpty) 'authorId': authorId.trim(),
         if (categoryId != null && categoryId.trim().isNotEmpty) 'categoryId': categoryId.trim(),
+        if (copyStatus != null && copyStatus.isNotEmpty) 'copyStatus': copyStatus,
       },
     );
     final data = _dataMap(response.data);

@@ -4,11 +4,13 @@ import 'package:provider/provider.dart'
     show ReadContext, WatchContext, SelectContext;
 
 import '../../features/notifications/presentation/screens/notification_list_screen.dart';
+import '../../features/notifications/presentation/providers/notification_provider.dart';
 import '../../features/sign/controllers/auth_controller.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
 import '../models/user_role.dart';
 import '../providers/navigation_provider.dart';
 import '../theme/app_colors.dart';
+import '../screens/library_screen.dart';
 
 class TopBar extends ConsumerWidget {
   const TopBar({super.key});
@@ -17,6 +19,7 @@ class TopBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nav = context.watch<NavigationProvider>();
     final user = ref.watch(authControllerProvider.select((s) => s.user));
+    final unread = ref.watch(unreadNotificationCountProvider).value ?? 0;
     final fullName = user?.fullName.trim() ?? '';
     final displayName = fullName.isNotEmpty
         ? fullName
@@ -51,6 +54,11 @@ class TopBar extends ConsumerWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: TextField(
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (value) {
+                      final query = value.trim();
+                      if (query.isNotEmpty) Navigator.of(context).push(MaterialPageRoute(builder: (_) => LibraryScreen(initialQuery: query)));
+                    },
                     decoration: InputDecoration(
                       hintText: 'Tìm sách, tác giả, thể loại...',
                       hintStyle: const TextStyle(
@@ -121,8 +129,10 @@ class TopBar extends ConsumerWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificationListScreen()),
             ),
-            child: const Icon(Icons.notifications_none_rounded,
-                color: AppColors.textDark),
+            child: Badge.count(
+              count: unread, isLabelVisible: unread > 0,
+              child: const Icon(Icons.notifications_none_rounded, color: AppColors.textDark),
+            ),
           ),
         ],
       ),

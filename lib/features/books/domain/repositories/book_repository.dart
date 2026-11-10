@@ -10,6 +10,7 @@ abstract class BookRepository {
     String? publisherId,
     String? authorId,
     String? categoryId,
+    String? copyStatus,
   });
   Future<Book> getBookById(String id);
   Future<void> createBook(Book book);

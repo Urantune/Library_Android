@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../sign/controllers/auth_controller.dart';
 
 import '../../domain/entities/user.dart';
 import '../providers/user_provider.dart';
@@ -235,7 +236,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       );
 
       if (profileOnly) {
-        await ref.read(userRepositoryProvider).updateMe(user);
+        final updated = await ref.read(userRepositoryProvider).updateMe(user);
+        ref.read(authControllerProvider.notifier).updateFullName(updated.fullName);
         ref.invalidate(currentUserProvider);
       } else if (isEditing) {
         await ref.read(userRepositoryProvider).updateUser(user);

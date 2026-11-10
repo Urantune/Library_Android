@@ -15,12 +15,13 @@ class BookListScreen extends ConsumerStatefulWidget {
 
 class _BookListScreenState extends ConsumerState<BookListScreen> {
   String _keyword = '';
+  String? _copyStatus;
   int _page = 0;
   static const _pageSize = 10;
 
   @override
   Widget build(BuildContext context) {
-    final pageQuery = BookQuery(page: _page, size: _pageSize, query: _keyword);
+    final pageQuery = BookQuery(page: _page, size: _pageSize, query: _keyword, copyStatus: _copyStatus);
     final pageAsync = ref.watch(bookPagedProvider(pageQuery));
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
@@ -62,11 +63,27 @@ class _BookListScreenState extends ConsumerState<BookListScreen> {
             ),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: DropdownButtonFormField<String>(
+            initialValue: _copyStatus ?? '',
+            decoration: const InputDecoration(labelText: 'Lọc theo tình trạng cuốn sách', filled: true, fillColor: Colors.white, border: OutlineInputBorder()),
+            items: const [
+              DropdownMenuItem(value: '', child: Text('Tất cả')),
+              DropdownMenuItem(value: 'AVAILABLE', child: Text('Còn trong thư viện')),
+              DropdownMenuItem(value: 'BORROWED', child: Text('Đã cho mượn')),
+              DropdownMenuItem(value: 'DAMAGED', child: Text('Hư hỏng')),
+              DropdownMenuItem(value: 'RESERVED', child: Text('Đang được giữ')),
+              DropdownMenuItem(value: 'LOST', child: Text('Đã mất')),
+            ],
+            onChanged: (value) => setState(() { _copyStatus = value == null || value.isEmpty ? null : value; _page = 0; }),
+          ),
+        ),
         Expanded(
           child: pageAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => _ErrorState(
-                message: error.toString(),
+                message: 'Vui lòng kiểm tra kết nối và thử lại.',
                 onRetry: () {
                   ref.invalidate(bookPagedProvider);
                   ref.invalidate(bookListProvider);
@@ -75,7 +92,7 @@ class _BookListScreenState extends ConsumerState<BookListScreen> {
               final items = result.items;
               if (items.isEmpty) {
                 return Center(
-                    child: Text(_keyword.isNotEmpty
+                    child: Text(_keyword.isNotEmpty || _copyStatus != null
                         ? 'Không tìm thấy sách phù hợp.'
                         : 'Chưa có sách nào.'));
               }
@@ -249,10 +266,10 @@ class _BookCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Đã xóa sách.'), backgroundColor: Colors.green));
       }
-    } catch (error) {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(const SnackBar(content: Text('Không thể xóa sách. Vui lòng kiểm tra sách đang được mượn hoặc kết nối.')));
       }
     }
   }

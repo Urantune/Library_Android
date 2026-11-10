@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lore_dungeo_library/app/screens/library_book_detail_screen.dart';
 import 'package:lore_dungeo_library/app/screens/library_screen.dart';
 import 'package:lore_dungeo_library/features/books/domain/entities/book.dart';
+import 'package:lore_dungeo_library/features/books/domain/entities/book_page.dart';
 import 'package:lore_dungeo_library/features/books/presentation/providers/book_provider.dart';
 
 const _books = [
@@ -33,7 +34,9 @@ const _books = [
 
 Widget _wrap(Widget child) => ProviderScope(
       overrides: [
-        bookListProvider.overrideWith((ref) async => _books),
+        bookPagedProvider.overrideWith((ref, query) async => BookPage.fromBooks(
+          query.copyStatus == 'AVAILABLE' ? _books.where((book) => book.available > 0).toList() : _books,
+          query: query.query, page: query.page, size: query.size)),
         bookDetailProvider.overrideWith((ref, id) async {
           return _books.firstWhere((book) => book.id == id);
         }),
@@ -58,6 +61,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'nhà giả kim');
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.text('Nhà giả kim'), findsOneWidget);

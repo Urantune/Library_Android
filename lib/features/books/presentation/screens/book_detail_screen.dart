@@ -166,10 +166,10 @@ class BookDetailScreen extends ConsumerWidget {
             content: Text('Đã xóa sách.'), backgroundColor: Colors.green));
         Navigator.pop(context, true);
       }
-    } catch (error) {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(const SnackBar(content: Text('Không thể xóa sách. Kiểm tra sách đang được mượn hoặc kết nối.')));
       }
     }
   }

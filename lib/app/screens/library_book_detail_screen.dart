@@ -33,7 +33,7 @@ class LibraryBookDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 const Text('Không thể tải chi tiết sách.'),
                 const SizedBox(height: 8),
-                Text(error.toString(), textAlign: TextAlign.center),
+                const Text('Vui lòng kiểm tra kết nối và thử lại.', textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () => ref.invalidate(bookDetailProvider(bookId)),

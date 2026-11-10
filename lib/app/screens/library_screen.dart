@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,35 +13,38 @@ import 'library_book_detail_screen.dart';
 /// Chỉ đọc dữ liệu từ `bookListProvider` của module books (Khang),
 /// không sửa code module books.
 class LibraryScreen extends ConsumerStatefulWidget {
-  const LibraryScreen({super.key});
+  const LibraryScreen({super.key, this.initialQuery = ''});
+  final String initialQuery;
 
   @override
   ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
 }
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
-  final TextEditingController _searchController = TextEditingController();
+  late final TextEditingController _searchController;
   String _query = '';
+  int _page = 0;
+  bool _availableOnly = false;
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _query = widget.initialQuery.trim();
+    _searchController = TextEditingController(text: _query);
+  }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  List<Book> _filter(List<Book> books) {
-    final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return books;
-    return books.where((book) {
-      final text = '${book.title} ${book.author} ${book.category} ${book.isbn}'
-          .toLowerCase();
-      return text.contains(query);
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final booksAsync = ref.watch(bookListProvider);
+    final query = BookQuery(page: _page, size: 20, query: _query, copyStatus: _availableOnly ? 'AVAILABLE' : null);
+    final booksAsync = ref.watch(bookPagedProvider(query));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -53,7 +57,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         actions: [
           IconButton(
             tooltip: 'Làm mới',
-            onPressed: () => ref.invalidate(bookListProvider),
+            onPressed: () => ref.invalidate(bookPagedProvider(query)),
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -64,7 +68,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: (value) {
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 350), () {
+                  if (mounted) setState(() { _query = value.trim(); _page = 0; });
+                });
+              },
               decoration: InputDecoration(
                 hintText: 'Tìm theo tên sách, tác giả, thể loại, ISBN...',
                 prefixIcon: const Icon(Icons.search, size: 20),
@@ -74,7 +83,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         tooltip: 'Xóa tìm kiếm',
                         onPressed: () {
                           _searchController.clear();
-                          setState(() => _query = '');
+                          _debounce?.cancel();
+                          setState(() { _query = ''; _page = 0; });
                         },
                         icon: const Icon(Icons.close, size: 18),
                       ),
@@ -92,21 +102,26 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(alignment: Alignment.centerLeft, child: FilterChip(
+              label: const Text('Còn sách'), selected: _availableOnly,
+              onSelected: (value) => setState(() { _availableOnly = value; _page = 0; }),
+            )),
+          ),
           Expanded(
             child: booksAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => _LibraryError(
-                message: error.toString(),
-                onRetry: () => ref.invalidate(bookListProvider),
+                message: 'Vui lòng kiểm tra kết nối và thử lại.',
+                onRetry: () => ref.invalidate(bookPagedProvider(query)),
               ),
-              data: (books) {
-                final visible = _filter(books);
+              data: (result) {
+                final visible = result.items;
                 if (visible.isEmpty) {
                   return Center(
                     child: Text(
-                      books.isEmpty
-                          ? 'Thư viện chưa có sách nào.'
-                          : 'Không tìm thấy sách phù hợp.',
+                      _query.isEmpty && !_availableOnly ? 'Thư viện chưa có sách nào.' : 'Không tìm thấy sách phù hợp.',
                     ),
                   );
                 }
@@ -117,7 +132,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          '${visible.length} sách',
+                          '${result.totalElements} sách',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -129,8 +144,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: () async {
-                          ref.invalidate(bookListProvider);
-                          await ref.read(bookListProvider.future);
+                          ref.invalidate(bookPagedProvider(query));
+                          await ref.read(bookPagedProvider(query).future);
                         },
                         child: ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
@@ -143,6 +158,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         ),
                       ),
                     ),
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      IconButton(tooltip: 'Trang trước', onPressed: _page > 0 ? () => setState(() => _page--) : null, icon: const Icon(Icons.chevron_left)),
+                      Text('Trang ${result.page + 1}/${result.totalPages}'),
+                      IconButton(tooltip: 'Trang sau', onPressed: _page + 1 < result.totalPages ? () => setState(() => _page++) : null, icon: const Icon(Icons.chevron_right)),
+                    ]),
                   ],
                 );
               },

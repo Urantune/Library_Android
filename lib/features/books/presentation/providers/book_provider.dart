@@ -20,6 +20,7 @@ class BookQuery {
   final String? publisherId;
   final String? authorId;
   final String? categoryId;
+  final String? copyStatus;
 
   const BookQuery({
     this.page = 0,
@@ -28,6 +29,7 @@ class BookQuery {
     this.publisherId,
     this.authorId,
     this.categoryId,
+    this.copyStatus,
   });
 
   @override
@@ -40,10 +42,10 @@ class BookQuery {
           query == other.query &&
           publisherId == other.publisherId &&
           authorId == other.authorId &&
-          categoryId == other.categoryId;
+          categoryId == other.categoryId && copyStatus == other.copyStatus;
 
   @override
-  int get hashCode => Object.hash(page, size, query, publisherId, authorId, categoryId);
+  int get hashCode => Object.hash(page, size, query, publisherId, authorId, categoryId, copyStatus);
 }
 
 final bookCategoriesProvider = FutureProvider<List<BookCategory>>(
@@ -64,6 +66,7 @@ final bookPagedProvider = FutureProvider.family<BookPage, BookQuery>((ref, query
         publisherId: query.publisherId,
         authorId: query.authorId,
         categoryId: query.categoryId,
+        copyStatus: query.copyStatus,
       );
 });
 final bookDetailProvider = FutureProvider.family<Book, String>(
