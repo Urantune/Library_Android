@@ -1,13 +1,14 @@
 import '../../../../core/network/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/book_copy_remote_data_source.dart';
-import '../../data/datasources/book_remote_data_source.dart';
+import '../../data/datasources/book_copy_api.dart';
+import '../../data/datasources/book_api.dart';
 import '../../data/repositories/book_repository_impl.dart';
 import '../../domain/entities/book.dart';
 import '../../domain/entities/book_copy.dart';
 import '../../domain/entities/book_page.dart';
 import '../../domain/repositories/book_repository.dart';
+import '../../domain/services/book_save_service.dart';
 import '../../../categories/models/book_category.dart';
 import '../../../categories/services/category_api_service.dart';
 import '../../../publishers/models/publisher.dart';
@@ -56,6 +57,8 @@ final bookRemoteDataSourceProvider =
     Provider<BookRemoteDataSource>((ref) => BookRemoteDataSource(ApiClient.catalogDio));
 final bookRepositoryProvider = Provider<BookRepository>(
     (ref) => BookRepositoryImpl(ref.watch(bookRemoteDataSourceProvider)));
+final bookSaveServiceProvider = Provider<BookSaveService>(
+    (ref) => BookSaveService(ref.watch(bookRepositoryProvider)));
 final bookListProvider = FutureProvider<List<Book>>(
     (ref) => ref.watch(bookRepositoryProvider).getBooks());
 final bookPagedProvider = FutureProvider.family<BookPage, BookQuery>((ref, query) {

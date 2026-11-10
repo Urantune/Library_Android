@@ -1,10 +1,21 @@
-import 'book.dart';
+import '../entities/book.dart';
+import '../repositories/book_repository.dart';
 
-class BookValidation {
-  static String normalizeIsbn(String value) =>
-      value.replaceAll(RegExp(r'[\s-]'), '').toUpperCase();
+class BookSaveService {
+  BookSaveService(this._repository);
+  final BookRepository _repository;
 
-  static Map<String, String> validate(Book book) {
+  Future<void> save(Book book, {required bool isEditing}) async {
+    final errors = _validate(book);
+    if (errors.isNotEmpty) throw StateError(errors.values.first);
+    if (isEditing) {
+      await _repository.updateBook(book);
+    } else {
+      await _repository.createBook(book);
+    }
+  }
+
+  Map<String, String> _validate(Book book) {
     final errors = <String, String>{};
     for (final entry in {
       'title': book.title,

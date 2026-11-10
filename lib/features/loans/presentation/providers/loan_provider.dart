@@ -2,7 +2,7 @@ import '../../../../core/config/api_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
-import '../../../books/data/datasources/book_remote_data_source.dart';
+import '../../../books/data/datasources/book_api.dart';
 import '../../../books/domain/entities/book.dart';
 import '../../../sign/controllers/auth_controller.dart';
 import '../../../sign/models/user.dart' as auth_user;

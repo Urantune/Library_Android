@@ -10,21 +10,8 @@ class BookRemoteDataSource {
   final Dio _dio;
 
   Future<List<Book>> getBooks({int page = 0, int size = 100, String? query}) async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '/api/books',
-      queryParameters: {
-        'page': page,
-        'size': size,
-        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
-      },
-    );
-    final data = _dataMap(response.data);
-    final items = data['items'];
-    if (items is! List) return const [];
-    return items
-        .whereType<Map>()
-        .map((item) => BookDto(Map<String, dynamic>.from(item)).toDomain())
-        .toList();
+    final result = await getBookPage(page: page, size: size, query: query);
+    return result.items;
   }
 
   Future<BookPage> getBookPage({

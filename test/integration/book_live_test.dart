@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:lore_dungeo_library/core/network/api_client.dart';
-import 'package:lore_dungeo_library/features/books/data/datasources/book_remote_data_source.dart';
+import 'package:lore_dungeo_library/features/books/data/datasources/book_api.dart';
 
 void main() {
   test('Gateway HTTP loads book list and matching detail from Catalog',

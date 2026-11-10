@@ -1,7 +1,7 @@
 import '../../domain/entities/book.dart';
 import '../../domain/entities/book_page.dart';
 import '../../domain/repositories/book_repository.dart';
-import '../datasources/book_remote_data_source.dart';
+import '../datasources/book_api.dart';
 
 class BookRepositoryImpl implements BookRepository {
   BookRepositoryImpl(this._remote);

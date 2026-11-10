@@ -4,6 +4,7 @@ import '../models/auth_response.dart';
 import '../models/login_request.dart';
 import '../models/register_request.dart';
 import '../models/user.dart';
+import 'auth_api.dart';
 
 abstract class AuthService {
   Future<AuthResponse> login(LoginRequest request, {bool remember = true});
@@ -14,9 +15,9 @@ abstract class AuthService {
 
 class ApiAuthService implements AuthService {
   ApiAuthService({required Dio dio, required TokenStorage storage})
-      : _dio = dio,
+      : _api = AuthApi(dio),
         _storage = storage;
-  final Dio _dio;
+  final AuthApi _api;
   final TokenStorage _storage;
 
   Map<String, dynamic> _data(Response<dynamic> response) {
@@ -32,8 +33,7 @@ class ApiAuthService implements AuthService {
       {bool remember = true}) async {
     late final Response<dynamic> response;
     try {
-      response = await _dio.post('/api/auth/login',
-          data: request.toJson(), options: Options(extra: {'skipAuth': true}));
+      response = await _api.login(request);
     } on DioException catch (error) {
       return AuthResponse.failure(messageFor(error), connectionError: isConnectionError(error));
     }
@@ -73,8 +73,7 @@ class ApiAuthService implements AuthService {
   @override
   Future<AuthResponse> register(RegisterRequest request) async {
     try {
-      final response = await _dio.post('/api/auth/register',
-          data: request.toJson(), options: Options(extra: {'skipAuth': true}));
+      final response = await _api.register(request);
       return AuthResponse.success(
           user: User.fromJson(_data(response)),
           message: 'Đăng ký thành công. Hãy đăng nhập để tiếp tục.');
@@ -89,7 +88,7 @@ class ApiAuthService implements AuthService {
   Future<User?> restore() async {
     if (await _storage.readAccessToken() == null) return null;
     try {
-      return User.fromJson(_data(await _dio.get('/api/users/me')));
+      return User.fromJson(_data(await _api.currentUser()));
     } on DioException catch (error) {
       if (error.response?.statusCode == 401 ||
           error.response?.statusCode == 403) {
@@ -103,7 +102,7 @@ class ApiAuthService implements AuthService {
   @override
   Future<void> logout() async {
     try {
-      await _dio.post('/api/auth/logout');
+      await _api.logout();
     } finally {
       await _storage.clear();
     }

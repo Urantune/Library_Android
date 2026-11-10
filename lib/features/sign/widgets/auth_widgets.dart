@@ -2,6 +2,114 @@ import 'package:flutter/material.dart';
 
 import '../constants/auth_constants.dart';
 
+class AuthHeader extends StatelessWidget {
+  const AuthHeader({super.key, required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Icon(Icons.menu_book_rounded,
+            size: 48, color: AuthColors.primary),
+        const SizedBox(height: 14),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: AuthColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 13, color: AuthColors.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+class AuthErrorBanner extends StatelessWidget {
+  const AuthErrorBanner({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AuthColors.error.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AuthColors.error.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, size: 18, color: AuthColors.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 13, color: AuthColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PrimaryButton extends StatelessWidget {
+  const PrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AuthColors.primary,
+          disabledBackgroundColor: AuthColors.primary.withValues(alpha: 0.7),
+          foregroundColor: Colors.white,
+          disabledForegroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: Colors.white,
+                ),
+              )
+            : Text(label),
+      ),
+    );
+  }
+}
+
 class AuthTextField extends StatefulWidget {
   const AuthTextField({
     super.key,

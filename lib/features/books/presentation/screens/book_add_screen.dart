@@ -6,7 +6,6 @@ import '../../../authors/presentation/providers/author_provider.dart';
 import '../../../categories/models/book_category.dart';
 import '../../../publishers/models/publisher.dart';
 import '../../domain/entities/book.dart';
-import '../../domain/entities/book_validation.dart';
 import '../providers/book_provider.dart';
 
 class BookAddScreen extends ConsumerStatefulWidget {
@@ -367,14 +366,7 @@ class _BookAddScreenState extends ConsumerState<BookAddScreen> {
       categoryIds: widget.book?.categoryIds.firstOrNull == _selectedCategoryId ? widget.book!.categoryIds : [_selectedCategoryId!],
     );
     try {
-      final errors = BookValidation.validate(book);
-      if (errors.isNotEmpty) throw StateError(errors.values.first);
-      final repository = ref.read(bookRepositoryProvider);
-      if (widget.book == null) {
-        await repository.createBook(book);
-      } else {
-        await repository.updateBook(book);
-      }
+      await ref.read(bookSaveServiceProvider).save(book, isEditing: widget.book != null);
       ref.invalidate(bookPagedProvider);
       ref.invalidate(bookListProvider);
       ref.invalidate(bookDetailProvider(book.id));
