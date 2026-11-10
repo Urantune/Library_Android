@@ -93,6 +93,17 @@ class BookReadIntegrationTest {
     }
 
     @Test
+    void filtersBooksByCopyStatusAcrossAllPages() throws Exception {
+        mvc.perform(get("/api/books").param("copyStatus", "BORROWED"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(1))
+            .andExpect(jsonPath("$.data.items[0].id").value(ID));
+        mvc.perform(get("/api/books").param("copyStatus", "DAMAGED"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(0));
+        mvc.perform(get("/api/books").param("copyStatus", "INVALID"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void listsOnlyActiveBooksWithStablePagination() throws Exception {
         mvc.perform(get("/api/books").param("size", "1").header("X-Correlation-Id", "books-test"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.traceId").value("books-test"))

@@ -24,12 +24,17 @@ public class BookReadService {
         this.mapper = mapper;
     }
 
-    @Cacheable(cacheNames = "book-pages", key = "#page + ':' + #size + ':' + #q + ':' + #publisherId + ':' + #authorId + ':' + #categoryId")
-    public PageResponse<BookResponse> list(int page, int size, String q, String publisherId, String authorId, String categoryId) {
+    @Cacheable(cacheNames = "book-pages", key = "#page + ':' + #size + ':' + #q + ':' + #publisherId + ':' + #authorId + ':' + #categoryId + ':' + #copyStatus")
+    public PageResponse<BookResponse> list(int page, int size, String q, String publisherId, String authorId, String categoryId, String copyStatus) {
         if (page < 0 || size < 1 || size > 100) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Page must be >= 0 and size between 1 and 100");
         }
-        var result = books.findAll(BookSpecifications.activeSearch(q, publisherId, authorId, categoryId),
+        catalogservice.enums.BookCopyStatus status = null;
+        if (copyStatus != null && !copyStatus.isBlank()) {
+            try { status = catalogservice.enums.BookCopyStatus.valueOf(copyStatus.trim().toUpperCase(java.util.Locale.ROOT)); }
+            catch (IllegalArgumentException ex) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid copy status"); }
+        }
+        var result = books.findAll(BookSpecifications.activeSearch(q, publisherId, authorId, categoryId, status),
             PageRequest.of(page, size, Sort.by("title").ascending().and(Sort.by("id"))));
         return new PageResponse<>(result.getContent().stream().map(mapper::toResponse).toList(),
             page, size, result.getTotalElements(), result.getTotalPages());

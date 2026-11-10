@@ -41,11 +41,12 @@ public class BookController {
         @RequestParam(required = false) String publisherId,
         @RequestParam(required = false) String authorId,
         @RequestParam(required = false) String categoryId,
+        @RequestParam(required = false) String copyStatus,
         @RequestHeader(value = "X-Correlation-Id", required = false) String traceId,
         HttpServletRequest request
     ) {
         authGuard.authorizeRead(request);
-        return ApiResponse.ok(service.list(page, size, q, publisherId, authorId, categoryId), trace(traceId));
+        return ApiResponse.ok(service.list(page, size, q, publisherId, authorId, categoryId, copyStatus), trace(traceId));
     }
 
     @GetMapping("/{id}")

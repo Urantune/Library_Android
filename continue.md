@@ -11,11 +11,26 @@ Contract hướng dẫn hiện tại: LM-1.1.1.
 Khởi tạo file này không có nghĩa tính năng của bất kỳ thành viên nào đã hoàn thành. Các phần chưa có bàn giao phải kiểm tra source thực tế.
 
 ===== NGUOI 1 - Dương Phúc Khang =====
-Cập nhật 2026-11-04. Đã fetch và fast-forward nhánh Server từ 6dba59e lên 3e05b03, giữ các commit Category mới trên remote.
-Phạm vi phiên này: bỏ module legacy renting-sevice vì không thuộc kiến trúc 7 service; mượn/trả dùng circulation-service. Đã bỏ module khỏi parent pom, cập nhật README và xóa thư mục renting-sevice.
-Database theo blueprint: identity-service/data/identity.db, catalog-service/data/catalog.db, circulation-service/data/circulation.db, reservation-service/data/reservation.db, notification-service/data/notification.db đều đã có và được Git theo dõi. Discovery và Gateway không cần SQLite. Không tạo thêm DB.
-Thay đổi local có sẵn cần giữ ngoài phần xóa: identity-service/data/identity.db do live test; file lock Word tạm ở repo root. Thay đổi renting-sevice/pom.xml bị xóa cùng module theo yêu cầu xóa service.
-Kiểm chứng và bước tiếp: xác nhận parent pom/README không còn module legacy; commit và push riêng phần xóa lên Server.
+Cập nhật 2026-11-10.
+Phạm vi backlog: PRM-001, 003, 006, 007, 008, 011–014 và MSS-009–013, 040–042. Chưa xác nhận hoàn thành 100%.
+Phiên Codex 10/11: sửa lỗi biên dịch, trả và cập nhật quan hệ sách, phân trang server, tìm tác giả, xác thực JWT khi ghi, thêm migration tương thích database hiện tại và xử lý Flyway local cho hai lịch sử thiếu đã biết. Flutter analyze phần sách không lỗi; test sách 21/21, auth 19/19; catalog test 19/19. Đã tạo tài khoản thử `abc@gmail.com` trong identity.db với vai trò ADMIN, LIBRARIAN, MEMBER; sao lưu DB trước đó trong identity-service/target. Qua gateway đã kiểm tra đăng nhập, hồ sơ, refresh, logout và CRUD sách kèm quan hệ bằng tài khoản này; CRUD dùng bản sao catalog DB. Windows build thành công và ứng dụng khởi động được; chưa kiểm tra thao tác GUI toàn bộ hoặc Redis/Kafka thật. Các thay đổi đang local, chưa push. JAVA_HOME user là JDK 21; PATH toàn máy chưa đổi được do thiếu quyền registry.
+Vai trò và phân quyền:
+- Quản lý sách là chức năng dùng chung cho Admin và Staff/Thủ thư (đối chiếu role thực tế `ADMIN`, `LIBRARIAN`): xem danh sách, chi tiết, thêm mới, cập nhật, xóa và tìm kiếm.
+- Tích hợp với trang bạn đọc (`MEMBER`): giữ nguyên giao diện `LibraryScreen` và `LibraryBookDetailScreen` của người phụ trách, tiêu thụ `bookListProvider` / `bookDetailProvider` và API `GET /api/books` mà không ảnh hưởng luồng mượn trả hay bản sao `book_copies`.
+Backend (catalog-service):
+- `BookController`: đọc qua `authorizeRead`; ghi qua `authorizeBookWrite`, xác thực Bearer JWT và role `ADMIN` hoặc `LIBRARIAN`, không tin header role tự khai.
+- `BookExceptionHandler`: bổ sung exception handler cho `PublisherException` đảm bảo trả về mã trạng thái (401/403) và cấu trúc lỗi nhất quán.
+- `BookCacheConfig` (MSS-041): hiện thực `CachingConfigurer` với `CacheErrorHandler` bắt lỗi kết nối Redis, ghi warning và fallback dữ liệu về DB mà không làm sập API; cache invalidation sau ghi đã được đảm bảo bởi `@CacheEvict` trên create, update và deactivate.
+- `OpenApiConfig` (MSS-042): cấu hình OpenAPI/Swagger với `SecurityScheme` Bearer JWT và `SecurityRequirement` cho catalog service.
+Frontend (LibPRM):
+- `BookDetailScreen`: bổ sung nút và popup xác nhận xóa sách dành cho Admin/Thủ thư, đồng bộ với `BookListScreen`, tự động cập nhật lại danh sách và chi tiết sau khi xóa.
+- Nền tảng mạng & auth (PRM-001, 003, 006, 007, 008): ApiClient, AuthInterceptor, AuthSession xử lý gắn JWT, single-flight refresh token và thu hồi phiên / logout chuẩn xác.
+File thay đổi:
+- `Assigment`: `catalogservice/controller/BookController.java`, `catalogservice/controller/BookExceptionHandler.java`, `catalogservice/config/BookCacheConfig.java`, `catalogservice/config/OpenApiConfig.java`.
+- `LibPRM`: `lib/features/books/presentation/screens/book_detail_screen.dart`.
+Kiểm chứng và hạn chế:
+- Giữ nguyên toàn bộ database SQLite, migration và code của các thành viên khác; giữ file untracked `Project_Group3.zip`. Không push hoặc đổi lịch sử Git.
+- Profile local bỏ qua các migration thiếu khi Flyway validate, đồng thời `LocalFlywayConfig` chỉ cho phép đúng hai script/checksum cũ đã biết; cần khôi phục file migration gốc nếu tìm lại được. Migration mới không xóa dữ liệu.
 ===== HET NGUOI 1 =====
 
 ===== NGUOI 2 - Đỗ Trọng Trí =====
