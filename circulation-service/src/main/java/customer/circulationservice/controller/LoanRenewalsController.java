@@ -6,15 +6,13 @@ import customer.circulationservice.dto.response.ResponseAPI;
 import customer.circulationservice.service.ILoanRenewals;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
@@ -22,6 +20,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/loan-renewals")
 public class LoanRenewalsController {
     ILoanRenewals renewalService;
+
+    @GetMapping
+    public ResponseEntity<ResponseAPI<List<LoanRenewalResponseDTO>>> getRenewals() {
+        List<LoanRenewalResponseDTO> result = renewalService.getRenewal();
+        return ResponseEntity.ok(
+                ResponseAPI.<List<LoanRenewalResponseDTO>>builder()
+                        .message("Renewal requests")
+                        .timestamp(Instant.now().toString())
+                        .result(result)
+                        .build()
+        );
+    }
+
+    @PostMapping("/admin/{renewalId}/approve")
+    public ResponseEntity<ResponseAPI<LoanRenewalResponseDTO>> approveRenewal(
+            @PathVariable String renewalId,
+            @RequestHeader("X-User-Id") String adminUserId) {
+
+        LoanRenewalResponseDTO result =
+                renewalService.approveRenewal(renewalId, adminUserId);
+
+        return ResponseEntity.ok(
+                ResponseAPI.<LoanRenewalResponseDTO>builder()
+                        .message("Renewal request approved")
+                        .timestamp(Instant.now().toString())
+                        .result(result)
+                        .build());
+    }
 
     @PostMapping
     public ResponseEntity<ResponseAPI<LoanRenewalResponseDTO>> requestRenewal(
