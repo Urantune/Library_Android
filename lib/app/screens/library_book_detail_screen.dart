@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/books/domain/entities/book.dart';
 import '../../features/books/presentation/providers/book_provider.dart';
+import '../../features/reservations/widgets/reserve_book_button.dart';
 import '../theme/app_colors.dart';
 
 /// Chi tiết sách ở chế độ chỉ đọc dành cho bạn đọc.
@@ -33,7 +34,8 @@ class LibraryBookDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 const Text('Không thể tải chi tiết sách.'),
                 const SizedBox(height: 8),
-                const Text('Vui lòng kiểm tra kết nối và thử lại.', textAlign: TextAlign.center),
+                const Text('Vui lòng kiểm tra kết nối và thử lại.',
+                    textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () => ref.invalidate(bookDetailProvider(bookId)),
@@ -122,6 +124,10 @@ class _BookDetail extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
+        if (!available) ...[
+          ReserveBookButton(book: book),
+          const SizedBox(height: 16),
+        ],
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(

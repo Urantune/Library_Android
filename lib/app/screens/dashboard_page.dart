@@ -9,6 +9,7 @@ import '../../features/categories/screens/category_screen.dart';
 import '../../features/notifications/presentation/screens/notification_list_screen.dart';
 import '../../features/loans/presentation/screens/borrowed_loans_screen.dart';
 import '../../features/publishers/screens/publisher_list_screen.dart';
+import '../../features/reservations/screens/reservation_list_screen.dart';
 import '../../features/sign/controllers/auth_controller.dart';
 import '../../features/users/presentation/screens/profile_screen.dart';
 import '../../features/users/presentation/screens/user_list_screen.dart';
@@ -73,6 +74,8 @@ class DashboardPage extends ConsumerWidget {
         return isStaff ? const UserListScreen() : const ProfileScreen();
       case NavIndex.loan:
         return const BorrowedLoansScreen();
+      case NavIndex.reservation:
+        return const ReservationListScreen();
       case NavIndex.notification:
         return const NotificationListScreen();
       default:
