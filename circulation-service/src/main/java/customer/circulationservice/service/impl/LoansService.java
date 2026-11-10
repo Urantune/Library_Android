@@ -17,6 +17,8 @@ import customer.circulationservice.repository.httpClient.LoansClient;
 import customer.circulationservice.service.ILoansService;
 import feign.FeignException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +49,14 @@ public class LoansService implements ILoansService {
         UserDto user = getActiveUser(request.getUserId());
 
         String now = Instant.now().toString();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        LocalDate dueAt = request.getDueAt() != null
+                ? request.getDueAt()
+                : today.plusDays(7);
+
+        if (!dueAt.isAfter(today)) {
+            throw new IllegalArgumentException("Hạn trả phải là ngày trong tương lai");
+        }
         Loans loan = loansMapper.toEntity(request);
         loan.setId(java.util.UUID.randomUUID().toString());
         loan.setUserId(user.id());
@@ -55,6 +65,7 @@ public class LoansService implements ILoansService {
         loan.setRenewCount(0);
         loan.setCreatedAt(now);
         loan.setUpdatedAt(now);
+        loan.setDueAt(dueAt.toString());
         loan = loansRepository.save(loan);
         String loanId = loan.getId();
 

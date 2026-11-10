@@ -49,6 +49,15 @@ public class Loans {
     @Column(name = "renew_count", nullable = false)
     private Integer renewCount = 0; // DEFAULT 0
 
+    @Column(name = "reservation_id")
+    private String reservationId;
+
+    @Column(name = "fulfillment_key")
+    private String fulfillmentKey;
+
+    @Column(name = "aggregate_version", nullable = false)
+    private Integer aggregateVersion = 1;
+
     @Column(name = "created_at", nullable = false)
     private String createdAt;
 

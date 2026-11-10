@@ -4,10 +4,13 @@ import catalogservice.dto.request.PublisherWriteRequest;
 import catalogservice.dto.response.PageResponse;
 import catalogservice.dto.response.PublisherResponse;
 import catalogservice.entity.Publisher;
+import catalogservice.exception.PublisherException;
 import catalogservice.repository.PublisherRepository;
+import catalogservice.repository.PublisherSpecifications;
 import java.util.Locale;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,9 +23,15 @@ public class PublisherService {
     public PublisherService(PublisherRepository publishers) { this.publishers = publishers; }
 
     @Transactional(readOnly = true)
-    public PageResponse<PublisherResponse> list(int page, int size) {
+    public PageResponse<PublisherResponse> list(String q, String requestedStatus, int page, int size) {
         validatePage(page, size);
-        var result = publishers.findAll(PageRequest.of(page, size));
+        String status = requestedStatus == null || requestedStatus.isBlank()
+                ? "ACTIVE" : requestedStatus.trim().toUpperCase(Locale.ROOT);
+        if (!"ACTIVE".equals(status) && !"INACTIVE".equals(status) && !"ALL".equals(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid publisher status");
+        }
+        var result = publishers.findAll(PublisherSpecifications.matching(q, status),
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name", "id")));
         return new PageResponse<>(result.getContent().stream().map(PublisherResponse::from).toList(),
             page, size, result.getTotalElements(), result.getTotalPages());
     }
@@ -31,28 +40,34 @@ public class PublisherService {
     public PublisherResponse get(String id) { return PublisherResponse.from(require(id)); }
 
     @Transactional
-    @CacheEvict(cacheNames = "book-pages", allEntries = true)
+    @CacheEvict(cacheNames = {"book-pages", "book-details"}, allEntries = true)
     public PublisherResponse create(PublisherWriteRequest request) {
         String name = request.name().trim();
-        if (publishers.existsByNameIgnoreCase(name)) throw conflict("Publisher name already exists");
+        if (publishers.existsByNameIgnoreCase(name)) {
+            throw new PublisherException(HttpStatus.CONFLICT, "DUPLICATE_PUBLISHER_NAME",
+                    "Publisher name already exists", java.util.Map.of("name", "Publisher name already exists"));
+        }
         Publisher publisher = new Publisher();
         apply(request, publisher);
         return PublisherResponse.from(publishers.saveAndFlush(publisher));
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "book-pages", allEntries = true)
+    @CacheEvict(cacheNames = {"book-pages", "book-details"}, allEntries = true)
     public PublisherResponse update(String id, PublisherWriteRequest request) {
         Publisher publisher = require(id);
         String name = request.name().trim();
         if (!publisher.getName().toLowerCase(Locale.ROOT).equals(name.toLowerCase(Locale.ROOT))
-            && publishers.existsByNameIgnoreCase(name)) throw conflict("Publisher name already exists");
+            && publishers.existsByNameIgnoreCase(name)) {
+            throw new PublisherException(HttpStatus.CONFLICT, "DUPLICATE_PUBLISHER_NAME",
+                    "Publisher name already exists", java.util.Map.of("name", "Publisher name already exists"));
+        }
         apply(request, publisher);
         return PublisherResponse.from(publishers.saveAndFlush(publisher));
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "book-pages", allEntries = true)
+    @CacheEvict(cacheNames = {"book-pages", "book-details"}, allEntries = true)
     public void delete(String id) {
         Publisher publisher = require(id);
         publisher.setStatus("INACTIVE");
@@ -70,7 +85,8 @@ public class PublisherService {
         publisher.setEmail(blankToNull(request.email()));
         publisher.setPhone(blankToNull(request.phone()));
         publisher.setWebsite(blankToNull(request.website()));
-        publisher.setStatus("ACTIVE");
+        publisher.setStatus(request.status() == null || request.status().isBlank()
+                ? "ACTIVE" : request.status().trim().toUpperCase(Locale.ROOT));
     }
 
     private void validatePage(int page, int size) {
