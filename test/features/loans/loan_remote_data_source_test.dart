@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lore_dungeo_library/features/loans/data/datasources/loan_remote_data_source.dart';
+import 'package:lore_dungeo_library/features/loans/data/models/loan_renewal_response.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockDio extends Mock implements Dio {}
@@ -79,7 +80,9 @@ void main() {
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
-        )).thenAnswer((_) async => _response('/api/loans', {
+        )).thenAnswer((_) async => _response(
+        '/api/loans',
+        {
           'message': 'Loan request submitted',
           'result': {
             'id': 'loan-2',
@@ -88,10 +91,12 @@ void main() {
             'renewCount': 0,
             'items': [],
           },
-        }, statusCode: 201));
+        },
+        statusCode: 201));
 
     final loan = await dataSource.requestLoan(
       userId: 'user-1',
+      dueAt: DateTime(2026, 11, 17),
       items: const [
         {'bookId': 'book-1', 'copyId': 'copy-1'},
       ],
@@ -103,6 +108,7 @@ void main() {
           '/api/loans',
           data: {
             'userId': 'user-1',
+            'dueAt': '2026-11-17',
             'items': [
               {'bookId': 'book-1', 'copyId': 'copy-1'},
             ],
@@ -110,5 +116,100 @@ void main() {
           options: captureAny(named: 'options'),
         )).captured.single as Options;
     expect(options.headers?['X-User-Id'], 'user-1');
+  });
+
+  test('posts a renewal request with user ID, loan ID, and optional reason',
+      () async {
+    when(() => dio.post<dynamic>(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        )).thenAnswer((_) async => _response(
+        '/api/loan-renewals',
+        {
+          'message': 'Renewal request submitted',
+          'result': {
+            'id': 'renewal-1',
+            'loanId': 'loan-1',
+            'requestedBy': 'user-1',
+            'requestedAt': '2026-11-10T10:00:00Z',
+            'previousDueAt': '2026-11-20T10:00:00Z',
+            'status': 'REQUESTED',
+            'reason': 'Need more time',
+          },
+        },
+        statusCode: 201));
+
+    final renewal = await dataSource.requestRenewal(
+      userId: 'user-1',
+      loanId: 'loan-1',
+      reason: '  Need more time  ',
+    );
+
+    expect(renewal, isA<LoanRenewalResponseDTO>());
+    expect(renewal.id, 'renewal-1');
+    expect(renewal.loanId, 'loan-1');
+    expect(renewal.previousDueAt, DateTime.utc(2026, 11, 20, 10));
+    final options = verify(() => dio.post<dynamic>(
+          '/api/loan-renewals',
+          data: {'loanId': 'loan-1', 'reason': 'Need more time'},
+          options: captureAny(named: 'options'),
+        )).captured.single as Options;
+    expect(options.headers?['X-User-Id'], 'user-1');
+  });
+
+  test('gets all renewal requests from the list endpoint', () async {
+    when(() => dio.get<dynamic>(any())).thenAnswer(
+      (_) async => _response('/api/loan-renewals', {
+        'message': 'Renewal request details',
+        'result': [
+          {
+            'id': 'renewal-1',
+            'loanId': 'loan-1',
+            'requestedBy': 'user-1',
+            'previousDueAt': '2026-11-20',
+            'newDueAt': '2026-11-27',
+            'status': 'REQUESTED',
+            'reason': 'Travel',
+          },
+        ],
+      }),
+    );
+
+    final renewals = await dataSource.getRenewals();
+
+    expect(renewals, hasLength(1));
+    expect(renewals.single.id, 'renewal-1');
+    expect(renewals.single.newDueAt, DateTime(2026, 11, 27));
+  });
+
+  test('approves a renewal with the admin user ID header', () async {
+    when(() => dio.post<dynamic>(
+          any(),
+          options: any(named: 'options'),
+        )).thenAnswer(
+      (_) async => _response('/api/loan-renewals/admin/renewal-1/approve', {
+        'message': 'Renewal request approved',
+        'result': {
+          'id': 'renewal-1',
+          'loanId': 'loan-1',
+          'requestedBy': 'user-1',
+          'status': 'APPROVED',
+          'approvedBy': 'admin-1',
+        },
+      }),
+    );
+
+    final renewal = await dataSource.approveRenewal(
+      renewalId: 'renewal-1',
+      adminUserId: 'admin-1',
+    );
+
+    expect(renewal.status, 'APPROVED');
+    final options = verify(() => dio.post<dynamic>(
+          '/api/loan-renewals/admin/renewal-1/approve',
+          options: captureAny(named: 'options'),
+        )).captured.single as Options;
+    expect(options.headers?['X-User-Id'], 'admin-1');
   });
 }

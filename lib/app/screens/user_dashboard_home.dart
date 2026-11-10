@@ -27,7 +27,8 @@ class UserDashboardHome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authControllerProvider.select((state) => state.user));
+    final user =
+        ref.watch(authControllerProvider.select((state) => state.user));
     final userId = user?.id ?? '';
     final loans =
         userId.isEmpty ? null : ref.watch(borrowedLoansProvider(userId));
@@ -83,6 +84,15 @@ class UserDashboardHome extends ConsumerWidget {
                 );
               },
             ),
+            if (userId.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              const _SectionTitle('Sách đang mượn'),
+              const SizedBox(height: 12),
+              _BorrowedBooksSection(
+                loans: loans!,
+                onRetry: () => ref.invalidate(borrowedLoansProvider(userId)),
+              ),
+            ],
             const SizedBox(height: 24),
             const _SectionTitle('Truy cập nhanh'),
             const SizedBox(height: 12),
@@ -143,7 +153,7 @@ class UserDashboardHome extends ConsumerWidget {
       loans.when(
         data: (page) {
           loading = false;
-          value = '${page.totalElements}';
+          value = '${_borrowedBookCount(page.content)}';
         },
         loading: () {},
         error: (_, __) {
@@ -167,6 +177,10 @@ class UserDashboardHome extends ConsumerWidget {
       },
     );
   }
+
+  static int _borrowedBookCount(List<LoanResponseDTO> loans) => loans
+      .where((loan) => loan.status.toUpperCase() == 'BORROWED')
+      .fold(0, (count, loan) => count + loan.items.length);
 
   Widget _booksCard(
     BuildContext context,
@@ -197,8 +211,7 @@ class UserDashboardHome extends ConsumerWidget {
       loading: loading,
       hasError: hasError,
       hint: hasError ? 'Chạm để tải lại' : 'Xem danh sách',
-      onTap: () =>
-          context.read<NavigationProvider>().selectMenu(NavIndex.book),
+      onTap: () => context.read<NavigationProvider>().selectMenu(NavIndex.book),
       onRetry: () => ref.invalidate(booksOverviewProvider),
     );
   }
@@ -250,6 +263,271 @@ class UserDashboardHome extends ConsumerWidget {
     final dd = date.day.toString().padLeft(2, '0');
     final mm = date.month.toString().padLeft(2, '0');
     return '${weekdays[date.weekday - 1]}, $dd/$mm/${date.year}';
+  }
+}
+
+class _BorrowedBooksSection extends StatelessWidget {
+  const _BorrowedBooksSection({
+    required this.loans,
+    required this.onRetry,
+  });
+
+  final AsyncValue<PageDTO<LoanResponseDTO>> loans;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return loans.when(
+      loading: () => const _BorrowedBooksContainer(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ),
+      error: (_, __) => _BorrowedBooksContainer(
+        child: ListTile(
+          leading: const Icon(Icons.error_outline, color: Color(0xFFDC2626)),
+          title: const Text('Không tải được danh sách sách đang mượn.'),
+          trailing: TextButton(
+            onPressed: onRetry,
+            child: const Text('Thử lại'),
+          ),
+        ),
+      ),
+      data: (page) {
+        final borrowedLoans = page.content
+            .where((loan) => loan.status.toUpperCase() == 'BORROWED')
+            .toList();
+        final bookCount = borrowedLoans.fold<int>(
+          0,
+          (count, loan) => count + loan.items.length,
+        );
+
+        if (bookCount == 0) {
+          return const _BorrowedBooksContainer(
+            child: ListTile(
+              leading: Icon(
+                Icons.menu_book_outlined,
+                color: Color(0xFF64748B),
+              ),
+              title: Text('Bạn chưa có sách đang mượn.'),
+            ),
+          );
+        }
+
+        return _BorrowedBooksContainer(
+          child: Column(
+            children: [
+              for (final loan in borrowedLoans)
+                for (var index = 0; index < loan.items.length; index++)
+                  _BorrowedBookRow(
+                    item: loan.items[index],
+                    loanId: loan.id,
+                    loanStatus: loan.status,
+                    dueAt: loan.dueAt,
+                    showDivider: index > 0 || borrowedLoans.first != loan,
+                  ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BorrowedBooksContainer extends StatelessWidget {
+  const _BorrowedBooksContainer({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: cardDecoration(),
+      child: Material(
+        type: MaterialType.transparency,
+        child: child,
+      ),
+    );
+  }
+}
+
+class _BorrowedBookRow extends StatelessWidget {
+  const _BorrowedBookRow({
+    required this.item,
+    required this.loanId,
+    required this.loanStatus,
+    required this.dueAt,
+    required this.showDivider,
+  });
+
+  final Map<String, dynamic> item;
+  final String loanId;
+  final String loanStatus;
+  final DateTime? dueAt;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    final nestedBook = item['book'];
+    final title = item['bookTitle'] ??
+        item['bookName'] ??
+        item['title'] ??
+        (nestedBook is Map ? nestedBook['title'] : null);
+    final bookId = item['bookId'] ?? item['id'];
+    final displayTitle = title?.toString().trim();
+    final heading = displayTitle != null && displayTitle.isNotEmpty
+        ? displayTitle
+        : bookId != null
+            ? 'Sách $bookId'
+            : 'Sách chưa có tên';
+    final dueDateLabel =
+        dueAt == null ? 'Chưa có hạn trả' : 'Hạn trả ${_formatDate(dueAt!)}';
+
+    return Column(
+      children: [
+        if (showDivider) const Divider(height: 1, indent: 16, endIndent: 16),
+        ListTile(
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.menu_book_rounded,
+              color: Color(0xFF2563EB),
+            ),
+          ),
+          title: Text(
+            heading,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          subtitle: Text(
+            '$dueDateLabel · Phiếu $loanId',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
+          trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (context) => _BorrowedBookDetailsDialog(
+              title: heading,
+              item: item,
+              loanId: loanId,
+              loanStatus: loanStatus,
+              dueAt: dueAt,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BorrowedBookDetailsDialog extends StatelessWidget {
+  const _BorrowedBookDetailsDialog({
+    required this.title,
+    required this.item,
+    required this.loanId,
+    required this.loanStatus,
+    required this.dueAt,
+  });
+
+  final String title;
+  final Map<String, dynamic> item;
+  final String loanId;
+  final String loanStatus;
+  final DateTime? dueAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final returnedAt = item['returnedAt']?.toString();
+    final conditionOnReturn = item['conditionOnReturn']?.toString();
+    final fineAmount = item['fineAmount'];
+
+    return AlertDialog(
+      title: Text(title),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _BookDetailRow('Mã phiếu', loanId),
+            _BookDetailRow('Trạng thái phiếu', loanStatus),
+            _BookDetailRow(
+              'Mã mục mượn',
+              item['id']?.toString() ?? 'Chưa có',
+            ),
+            _BookDetailRow(
+              'Mã sách',
+              item['bookId']?.toString() ?? 'Chưa có',
+            ),
+            _BookDetailRow(
+              'Mã bản sao',
+              item['copyId']?.toString() ?? 'Chưa có',
+            ),
+            _BookDetailRow(
+              'Trạng thái sách',
+              item['itemStatus']?.toString() ?? 'Chưa có',
+            ),
+            _BookDetailRow(
+              'Hạn trả',
+              dueAt == null ? 'Chưa có' : _formatDate(dueAt!),
+            ),
+            if (returnedAt != null && returnedAt.isNotEmpty)
+              _BookDetailRow('Ngày trả', returnedAt),
+            if (conditionOnReturn != null && conditionOnReturn.isNotEmpty)
+              _BookDetailRow('Tình trạng khi trả', conditionOnReturn),
+            if (fineAmount != null)
+              _BookDetailRow('Tiền phạt', fineAmount.toString()),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Đóng'),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookDetailRow extends StatelessWidget {
+  const _BookDetailRow(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: const TextStyle(color: Color(0xFF64748B)),
+            ),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
   }
 }
 
@@ -462,7 +740,8 @@ class _MetricCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: hasError ? const Color(0xFFDC2626) : AppColors.primary,
+                    color:
+                        hasError ? const Color(0xFFDC2626) : AppColors.primary,
                   ),
                 ),
               ],
@@ -561,4 +840,10 @@ class _Chip extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatDate(DateTime date) {
+  final day = date.day.toString().padLeft(2, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  return '$day/$month/${date.year}';
 }

@@ -9,6 +9,7 @@ import '../../../sign/models/user.dart' as auth_user;
 import '../../../users/data/datasources/user_remote_data_source.dart';
 import '../../../users/domain/entities/user.dart' as user_entity;
 import '../../data/datasources/loan_remote_data_source.dart';
+import '../../data/models/loan_renewal_response.dart';
 import '../../data/models/loan_response.dart';
 
 final loanCurrentUserIdProvider = FutureProvider<String>((ref) async {
@@ -29,12 +30,27 @@ final loanRemoteDataSourceProvider = Provider<LoanRemoteDataSource>((ref) {
 
 final borrowedLoansProvider =
     FutureProvider.family<PageDTO<LoanResponseDTO>, String>((ref, userId) {
+  final authenticatedUserId =
+      ref.watch(authControllerProvider.select((state) => state.user?.id));
+  if (authenticatedUserId != userId) {
+    throw StateError(
+        'Phiên đăng nhập đã thay đổi. Vui lòng tải lại phiếu mượn.');
+  }
   return ref.watch(loanRemoteDataSourceProvider).getBorrowedLoans(userId);
 });
 
 final adminLoansProvider =
     FutureProvider.family<PageDTO<LoanResponseDTO>, String>((ref, userRoles) {
-  return ref.watch(loanRemoteDataSourceProvider).getAllLoans(userRoles: userRoles);
+  ref.watch(authControllerProvider.select((state) => state.user?.id));
+  return ref
+      .watch(loanRemoteDataSourceProvider)
+      .getAllLoans(userRoles: userRoles);
+});
+
+final adminLoanRenewalsProvider =
+    FutureProvider<List<LoanRenewalResponseDTO>>((ref) {
+  ref.watch(authControllerProvider.select((state) => state.user?.id));
+  return ref.watch(loanRemoteDataSourceProvider).getRenewals();
 });
 
 final loanUserDetailsProvider =

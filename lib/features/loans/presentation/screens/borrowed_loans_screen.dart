@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../books/domain/entities/book.dart';
+import '../../data/models/loan_renewal_response.dart';
 import '../../data/models/loan_response.dart';
 import '../providers/loan_provider.dart';
 
@@ -20,11 +21,17 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
   String _query = '';
   bool _isRequestingLoan = false;
   final Map<String, String> _processingLoanActions = {};
+  final Set<String> _pendingRenewals = {};
 
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(loanCurrentUserInfoProvider);
     final userRoles = currentUser?.roles.join(',') ?? '';
+    final isStaff = currentUser?.roles.any((role) {
+          final value = role.toUpperCase();
+          return value == 'ADMIN' || value == 'LIBRARIAN' || value == 'STAFF';
+        }) ??
+        false;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -40,51 +47,78 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
           IconButton(
             tooltip: 'Làm mới',
             onPressed: () {
-              ref.invalidate(adminLoansProvider(userRoles));
+              if (isStaff) {
+                ref.invalidate(adminLoansProvider(userRoles));
+                ref.invalidate(adminLoanRenewalsProvider);
+              } else if (currentUser != null) {
+                ref.invalidate(borrowedLoansProvider(currentUser.id));
+              }
               ref.invalidate(loanBookListProvider);
             },
             icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-      body: currentUser == null
-          ? _ErrorView(
-              message: 'Phiên đăng nhập không có thông tin người dùng.',
-              onRetry: () => ref.invalidate(loanCurrentUserInfoProvider),
-            )
-          : ref.watch(adminLoansProvider(userRoles)).when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => _ErrorView(
-            message: _loanRequestErrorMessage(
-              error,
-              action: 'tải danh sách loans quản trị',
+      body: ref.watch(loanCurrentUserIdProvider).when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => _ErrorView(
+              message: _loanRequestErrorMessage(
+                error,
+                action: 'tải thông tin người dùng',
+              ),
+              onRetry: () => ref.invalidate(loanCurrentUserIdProvider),
             ),
-            onRetry: () => ref.invalidate(adminLoansProvider(userRoles)),
+            data: (userId) {
+              final loans = isStaff
+                  ? ref.watch(adminLoansProvider(userRoles))
+                  : ref.watch(borrowedLoansProvider(userId));
+              final renewals =
+                  isStaff ? ref.watch(adminLoanRenewalsProvider) : null;
+              return loans.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => _ErrorView(
+                  message: _loanRequestErrorMessage(
+                    error,
+                    action: 'tải danh sách phiếu mượn',
+                  ),
+                  onRetry: () {
+                    if (isStaff) {
+                      ref.invalidate(adminLoansProvider(userRoles));
+                    } else {
+                      ref.invalidate(borrowedLoansProvider(userId));
+                    }
+                  },
+                ),
+                data: (page) => _buildLoanList(
+                  userId,
+                  userRoles,
+                  page,
+                  isStaff: isStaff,
+                  renewals: renewals,
+                ),
+              );
+            },
           ),
-          data: (page) => _buildLoanList(currentUser.id, userRoles, page),
-        ),
     );
   }
 
   Widget _buildLoanList(
-    String userId,
-    String userRoles,
-    PageDTO<LoanResponseDTO> page,
-  ) {
+      String userId, String userRoles, PageDTO<LoanResponseDTO> page,
+      {required bool isStaff,
+      AsyncValue<List<LoanRenewalResponseDTO>>? renewals}) {
     final loans = page.content.where((loan) {
       final searchable =
-          '${loan.id} ${loan.userId} ${loan.status} ${loan.items}'.toLowerCase();
+          '${loan.id} ${loan.userId} ${loan.status} ${loan.items}'
+              .toLowerCase();
       return searchable.contains(_query);
     }).toList()
-      ..sort((a, b) =>
-          (b.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
-              .compareTo(a.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
-    final borrowedLoans = loans
-        .where((loan) => loan.status.toUpperCase() == 'BORROWED')
-        .toList();
+      ..sort((a, b) => (b.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+          .compareTo(a.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
+    final borrowedLoans =
+        loans.where((loan) => loan.status.toUpperCase() == 'BORROWED').toList();
     final requestedLoans = loans
-      .where((loan) => loan.status.toUpperCase() == 'REQUESTED')
-      .toList();
+        .where((loan) => loan.status.toUpperCase() == 'REQUESTED')
+        .toList();
     final borrowedBookCount = borrowedLoans.fold<int>(
       0,
       (count, loan) => count + loan.items.length,
@@ -92,15 +126,25 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(adminLoansProvider(userRoles));
-        await ref.read(adminLoansProvider(userRoles).future);
+        if (isStaff) {
+          ref.invalidate(adminLoansProvider(userRoles));
+          ref.invalidate(adminLoanRenewalsProvider);
+          await Future.wait([
+            ref.read(adminLoansProvider(userRoles).future),
+            ref.read(adminLoanRenewalsProvider.future),
+          ]);
+        } else {
+          ref.invalidate(borrowedLoansProvider(userId));
+          await ref.read(borrowedLoansProvider(userId).future);
+        }
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [
           TextField(
-            onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+            onChanged: (value) =>
+                setState(() => _query = value.trim().toLowerCase()),
             decoration: InputDecoration(
               hintText: 'Tìm theo mã phiếu hoặc trạng thái...',
               prefixIcon: const Icon(Icons.search, size: 19),
@@ -117,25 +161,29 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _isRequestingLoan
-                  ? null
-                  : () => _requestLoan(userId, userRoles),
-              icon: _isRequestingLoan
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.add),
-              label: Text(
-                _isRequestingLoan ? 'Đang gửi yêu cầu...' : 'Yêu cầu mượn sách',
+          if (!isStaff) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isRequestingLoan
+                    ? null
+                    : () => _requestLoan(userId, userRoles),
+                icon: _isRequestingLoan
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add),
+                label: Text(
+                  _isRequestingLoan
+                      ? 'Đang gửi yêu cầu...'
+                      : 'Yêu cầu mượn sách',
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
           Text(
             '${page.totalElements} phiếu mượn',
             style: const TextStyle(
@@ -145,32 +193,44 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            'Yêu cầu chờ duyệt (${requestedLoans.length})',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF25364A),
+          if (isStaff && renewals != null) ...[
+            _AdminRenewalRequestsSection(
+              renewals: renewals,
+              processingRenewals: _processingLoanActions,
+              onApprove: (renewal) =>
+                  _approveRenewal(renewal, userId, userRoles),
+              onRetry: () => ref.invalidate(adminLoanRenewalsProvider),
             ),
-          ),
-          const SizedBox(height: 8),
-          if (requestedLoans.isEmpty)
-            const Text(
-              'Không có yêu cầu mượn đang chờ duyệt.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF667085)),
-            )
-          else
-            for (final loan in requestedLoans) ...[
-              _RequestedLoanCard(
-                loan: loan,
-                processingAction: _processingLoanActions[loan.id],
-                onTap: () => _showLoanDetails(loan),
-                onApprove: () => _approveLoan(loan, userId, userRoles),
-                onReject: () => _rejectLoan(loan, userId, userRoles),
+            const SizedBox(height: 18),
+          ],
+          if (isStaff) ...[
+            Text(
+              'Yêu cầu chờ duyệt (${requestedLoans.length})',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF25364A),
               ),
-              const SizedBox(height: 8),
-            ],
-          const SizedBox(height: 18),
+            ),
+            const SizedBox(height: 8),
+            if (requestedLoans.isEmpty)
+              const Text(
+                'Không có yêu cầu mượn đang chờ duyệt.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF667085)),
+              )
+            else
+              for (final loan in requestedLoans) ...[
+                _RequestedLoanCard(
+                  loan: loan,
+                  processingAction: _processingLoanActions[loan.id],
+                  onTap: () => _showLoanDetails(loan),
+                  onApprove: () => _approveLoan(loan, userId, userRoles),
+                  onReject: () => _rejectLoan(loan, userId, userRoles),
+                ),
+                const SizedBox(height: 8),
+              ],
+            const SizedBox(height: 18),
+          ],
           Text(
             'Sách đang mượn ($borrowedBookCount)',
             style: const TextStyle(
@@ -215,6 +275,13 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
               _LoanCard(
                 loan: loan,
                 onTap: () => _showLoanDetails(loan),
+                renewalPending: _pendingRenewals.contains(loan.id),
+                onRenew: !isStaff &&
+                        loan.status.toUpperCase() == 'BORROWED' &&
+                        loan.dueAt?.isAfter(DateTime.now()) == true &&
+                        !_pendingRenewals.contains(loan.id)
+                    ? () => _requestRenewal(loan, userId)
+                    : null,
               ),
               const SizedBox(height: 9),
             ],
@@ -228,6 +295,173 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
       context: context,
       builder: (context) => _LoanDetailsDialog(loan: loan),
     );
+  }
+
+  Future<void> _approveRenewal(
+    LoanRenewalResponseDTO renewal,
+    String adminUserId,
+    String userRoles,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Duyệt gia hạn'),
+        content: Text('Duyệt yêu cầu gia hạn phiếu ${renewal.loanId}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Xác nhận duyệt'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final actionKey = 'renewal:${renewal.id}';
+    setState(() => _processingLoanActions[actionKey] = 'approve');
+    try {
+      final approvedRenewal = await ref
+          .read(loanRemoteDataSourceProvider)
+          .approveRenewal(
+            renewalId: renewal.id,
+            adminUserId: adminUserId,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw TimeoutException(
+              'BE không phản hồi khi duyệt gia hạn sau 20 giây.',
+            ),
+          );
+      ref.invalidate(adminLoanRenewalsProvider);
+      ref.invalidate(adminLoansProvider(userRoles));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Đã duyệt gia hạn phiếu ${approvedRenewal.loanId}.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _loanRequestErrorMessage(error, action: 'duyệt yêu cầu gia hạn'),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _processingLoanActions.remove(actionKey));
+    }
+  }
+
+  Future<void> _requestRenewal(LoanResponseDTO loan, String userId) async {
+    final reasonController = TextEditingController();
+    final proposedDueAt = loan.dueAt?.add(const Duration(days: 7));
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Yêu cầu gia hạn'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Gửi yêu cầu gia hạn cho phiếu ${loan.id}?'),
+            const SizedBox(height: 8),
+            Text(
+              'Hạn trả hiện tại: ${_formatDetailDate(loan.dueAt)}',
+              style: const TextStyle(fontSize: 13, color: Color(0xFF667085)),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Thời gian gia hạn: 7 ngày',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Hạn mới dự kiến nếu được duyệt: '
+              '${_formatDetailDate(proposedDueAt)}',
+              style: const TextStyle(fontSize: 13, color: Color(0xFF667085)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Lý do gia hạn (không bắt buộc)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(reasonController.text.trim()),
+            child: const Text('Gửi yêu cầu'),
+          ),
+        ],
+      ),
+    );
+    reasonController.dispose();
+    if (reason == null || !mounted) return;
+
+    setState(() => _processingLoanActions[loan.id] = 'renew');
+    try {
+      final renewal = await ref
+          .read(loanRemoteDataSourceProvider)
+          .requestRenewal(
+            userId: userId,
+            loanId: loan.id,
+            reason: reason,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw TimeoutException(
+              'BE không phản hồi khi gửi yêu cầu gia hạn sau 20 giây.',
+            ),
+          );
+      if (renewal.status.toUpperCase() == 'REQUESTED' && mounted) {
+        setState(() => _pendingRenewals.add(loan.id));
+      }
+      if (mounted) {
+        final newDueAt = renewal.newDueAt ?? proposedDueAt;
+        final newDueAtMessage = newDueAt == null
+            ? ''
+            : ' Hạn mới dự kiến: ${_formatDetailDate(newDueAt)}.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Đã gửi yêu cầu gia hạn phiếu ${loan.id} '
+              '(trạng thái ${renewal.status}).$newDueAtMessage',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _loanRequestErrorMessage(error, action: 'gửi yêu cầu gia hạn'),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _processingLoanActions.remove(loan.id));
+    }
   }
 
   Future<void> _approveLoan(
@@ -382,51 +616,85 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
     setState(() => _isRequestingLoan = true);
     try {
       final books = await ref.read(loanBookListProvider.future).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () => throw TimeoutException(
-          'API sách không phản hồi tại port 8082.',
-        ),
-      );
+            const Duration(seconds: 15),
+            onTimeout: () => throw TimeoutException(
+              'API sách không phản hồi tại port 8082.',
+            ),
+          );
       if (books.isEmpty) {
         throw StateError('API sách không trả về danh sách sách.');
       }
       if (!mounted) return;
 
       final selectedBooks = <Book>{};
-      final selection = await showDialog<List<Book>>(
+      var selectedDueDate =
+          DateUtils.dateOnly(DateTime.now().add(const Duration(days: 7)));
+      final selection = await showDialog<({List<Book> books, DateTime dueAt})>(
         context: context,
         builder: (dialogContext) => StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
             title: const Text('Chọn sách muốn mượn'),
             content: SizedBox(
               width: 440,
-              height: 320,
-              child: ListView.builder(
-                itemCount: books.length,
-                itemBuilder: (context, index) {
-                  final book = books[index];
-                  final isActive = book.status.toUpperCase() == 'ACTIVE';
-                  return CheckboxListTile(
-                    value: selectedBooks.contains(book),
-                    title: Text(book.title),
-                    subtitle: Text(
-                      '${book.status} · Còn ${book.available} bản',
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
+              height: 390,
+              child: Column(
+                children: [
+                  ListTile(
                     contentPadding: EdgeInsets.zero,
-                    onChanged: isActive
-                        ? (selected) {
-                            setDialogState(() {
-                              if (selected == true) {
-                                selectedBooks.add(book);
-                              } else {
-                                selectedBooks.remove(book);
-                              }
-                            });
-                          }
-                        : null,
-                  );
-                },
+                    leading: const Icon(Icons.event_available_outlined),
+                    title: const Text('Hạn trả dự kiến'),
+                    subtitle: Text(_formatDetailDate(selectedDueDate)),
+                    trailing: const Icon(Icons.edit_calendar_outlined),
+                    onTap: () async {
+                      final tomorrow = DateUtils.dateOnly(
+                        DateTime.now().add(const Duration(days: 1)),
+                      );
+                      final pickedDate = await showDatePicker(
+                        context: dialogContext,
+                        initialDate: selectedDueDate.isBefore(tomorrow)
+                            ? tomorrow
+                            : selectedDueDate,
+                        firstDate: tomorrow,
+                        lastDate: DateTime(2100),
+                      );
+                      if (pickedDate != null) {
+                        setDialogState(() {
+                          selectedDueDate = DateUtils.dateOnly(pickedDate);
+                        });
+                      }
+                    },
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: books.length,
+                      itemBuilder: (context, index) {
+                        final book = books[index];
+                        final isActive = book.status.toUpperCase() == 'ACTIVE';
+                        return CheckboxListTile(
+                          value: selectedBooks.contains(book),
+                          title: Text(book.title),
+                          subtitle: Text(
+                            '${book.status} · Còn ${book.available} bản',
+                          ),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: isActive
+                              ? (selected) {
+                                  setDialogState(() {
+                                    if (selected == true) {
+                                      selectedBooks.add(book);
+                                    } else {
+                                      selectedBooks.remove(book);
+                                    }
+                                  });
+                                }
+                              : null,
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
             actions: [
@@ -437,8 +705,10 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
               FilledButton(
                 onPressed: selectedBooks.isEmpty
                     ? null
-                    : () => Navigator.of(dialogContext)
-                        .pop(selectedBooks.toList()),
+                    : () => Navigator.of(dialogContext).pop((
+                          books: selectedBooks.toList(),
+                          dueAt: selectedDueDate,
+                        )),
                 child: const Text('Gửi yêu cầu'),
               ),
             ],
@@ -446,28 +716,40 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
         ),
       );
 
-      if (selection == null || selection.isEmpty || !mounted) return;
+      if (selection == null || selection.books.isEmpty || !mounted) return;
 
       action = 'gửi yêu cầu mượn';
       final cancelToken = CancelToken();
-      final createdLoan = await ref.read(loanRemoteDataSourceProvider).requestLoan(
-        userId: userId,
-        items: selection.map((book) => {'bookId': book.id}).toList(),
-        cancelToken: cancelToken,
-      ).timeout(
+      final createdLoan = await ref
+          .read(loanRemoteDataSourceProvider)
+          .requestLoan(
+            userId: userId,
+            items: selection.books.map((book) => {'bookId': book.id}).toList(),
+            dueAt: selection.dueAt,
+            cancelToken: cancelToken,
+          )
+          .timeout(
         const Duration(seconds: 20),
         onTimeout: () {
           cancelToken.cancel('Loan request timed out');
           throw TimeoutException('BE không phản hồi sau 20 giây.');
         },
       );
-      ref.invalidate(adminLoansProvider(userRoles));
+      final isStaff = userRoles.split(',').any((role) {
+        final value = role.trim().toUpperCase();
+        return value == 'ADMIN' || value == 'LIBRARIAN' || value == 'STAFF';
+      });
+      if (isStaff) {
+        ref.invalidate(adminLoansProvider(userRoles));
+      } else {
+        ref.invalidate(borrowedLoansProvider(userId));
+      }
       if (mounted) {
         final returnedCount = createdLoan.items.length;
-        final message = returnedCount == selection.length
+        final message = returnedCount == selection.books.length
             ? 'Đã gửi phiếu ${createdLoan.id} với $returnedCount đầu sách.'
             : 'BE tạo phiếu ${createdLoan.id} nhưng phản hồi '
-                '$returnedCount/${selection.length} loan item. Kiểm tra service lưu chi tiết.';
+                '$returnedCount/${selection.books.length} loan item. Kiểm tra service lưu chi tiết.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
         );
@@ -475,7 +757,8 @@ class _BorrowedLoansScreenState extends ConsumerState<BorrowedLoansScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_loanRequestErrorMessage(error, action: action))),
+          SnackBar(
+              content: Text(_loanRequestErrorMessage(error, action: action))),
         );
       }
     } finally {
@@ -496,8 +779,8 @@ class _RequestedLoanCard extends StatelessWidget {
   final LoanResponseDTO loan;
   final String? processingAction;
   final VoidCallback onTap;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
+  final VoidCallback? onApprove;
+  final VoidCallback? onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -545,39 +828,219 @@ class _RequestedLoanCard extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 4,
                 children: [
-                  FilledButton.tonalIcon(
-                    onPressed: processingAction == null ? onApprove : null,
-                    icon: processingAction == 'approve'
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.check, size: 17),
-                    label: Text(
-                      processingAction == 'approve' ? 'Đang duyệt' : 'Duyệt',
+                  if (onApprove != null)
+                    FilledButton.tonalIcon(
+                      onPressed: processingAction == null ? onApprove : null,
+                      icon: processingAction == 'approve'
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check, size: 17),
+                      label: Text(
+                        processingAction == 'approve' ? 'Đang duyệt' : 'Duyệt',
+                      ),
                     ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: processingAction == null ? onReject : null,
-                    icon: processingAction == 'reject'
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.close, size: 17),
-                    label: Text(
-                      processingAction == 'reject'
-                          ? 'Đang từ chối'
-                          : 'Từ chối',
+                  if (onReject != null)
+                    OutlinedButton.icon(
+                      onPressed: processingAction == null ? onReject : null,
+                      icon: processingAction == 'reject'
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.close, size: 17),
+                      label: Text(
+                        processingAction == 'reject'
+                            ? 'Đang từ chối'
+                            : 'Từ chối',
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AdminRenewalRequestsSection extends StatelessWidget {
+  const _AdminRenewalRequestsSection({
+    required this.renewals,
+    required this.processingRenewals,
+    required this.onApprove,
+    required this.onRetry,
+  });
+
+  final AsyncValue<List<LoanRenewalResponseDTO>> renewals;
+  final Map<String, String> processingRenewals;
+  final ValueChanged<LoanRenewalResponseDTO> onApprove;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Yêu cầu gia hạn chờ duyệt',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF25364A),
+          ),
+        ),
+        const SizedBox(height: 8),
+        renewals.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, stack) => Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Không tải được yêu cầu gia hạn.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
+                ),
+              ),
+              TextButton(onPressed: onRetry, child: const Text('Thử lại')),
+            ],
+          ),
+          data: (allRenewals) {
+            final pendingRenewals = allRenewals
+                .where((renewal) => renewal.status.toUpperCase() == 'REQUESTED')
+                .toList()
+              ..sort(
+                (a, b) =>
+                    (b.requestedAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+                        .compareTo(a.requestedAt ??
+                            DateTime.fromMillisecondsSinceEpoch(0)),
+              );
+            if (pendingRenewals.isEmpty) {
+              return const Text(
+                'Không có yêu cầu gia hạn đang chờ duyệt.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF667085)),
+              );
+            }
+            return Column(
+              children: [
+                for (final renewal in pendingRenewals) ...[
+                  _AdminRenewalRequestCard(
+                    renewal: renewal,
+                    processing:
+                        processingRenewals['renewal:${renewal.id}'] != null,
+                    onApprove: () => onApprove(renewal),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminRenewalRequestCard extends StatelessWidget {
+  const _AdminRenewalRequestCard({
+    required this.renewal,
+    required this.processing,
+    required this.onApprove,
+  });
+
+  final LoanRenewalResponseDTO renewal;
+  final bool processing;
+  final VoidCallback onApprove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(7),
+        side: const BorderSide(color: Color(0xFFE4E9F0)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Phiếu ${renewal.loanId}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF25364A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _RenewalInfoRow('Mã yêu cầu', renewal.id),
+            _RenewalInfoRow('Người yêu cầu', renewal.requestedBy),
+            _RenewalInfoRow(
+              'Ngày yêu cầu',
+              _formatDetailDate(renewal.requestedAt),
+            ),
+            _RenewalInfoRow(
+              'Hạn trả hiện tại',
+              _formatDetailDate(renewal.previousDueAt),
+            ),
+            _RenewalInfoRow(
+              'Hạn trả mới',
+              _formatDetailDate(renewal.newDueAt),
+            ),
+            if (renewal.reason?.trim().isNotEmpty == true)
+              _RenewalInfoRow('Lý do', renewal.reason!.trim()),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: processing ? null : onApprove,
+                icon: processing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check, size: 18),
+                label: Text(processing ? 'Đang duyệt...' : 'Duyệt gia hạn'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RenewalInfoRow extends StatelessWidget {
+  const _RenewalInfoRow(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF667085)),
+            ),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontSize: 12)),
+          ),
+        ],
       ),
     );
   }
@@ -645,12 +1108,12 @@ String _loanRequestErrorMessage(Object error, {required String action}) {
     }
     final statusCode = error.response?.statusCode;
     final body = error.response?.data;
-    final serverMessage = body is Map
-        ? body['message'] ?? body['error'] ?? body['detail']
-        : body;
+    final serverMessage =
+        body is Map ? body['message'] ?? body['error'] ?? body['detail'] : body;
     if (serverMessage != null && serverMessage.toString().trim().isNotEmpty) {
       final message = serverMessage.toString().trim();
-      final detail = message.length > 240 ? '${message.substring(0, 240)}…' : message;
+      final detail =
+          message.length > 240 ? '${message.substring(0, 240)}…' : message;
       return 'Không thể $action${statusCode == null ? '' : ' (HTTP $statusCode)'}: $detail';
     }
     if (statusCode != null) {
@@ -661,10 +1124,17 @@ String _loanRequestErrorMessage(Object error, {required String action}) {
 }
 
 class _LoanCard extends StatelessWidget {
-  const _LoanCard({required this.loan, required this.onTap});
+  const _LoanCard({
+    required this.loan,
+    required this.onTap,
+    required this.renewalPending,
+    required this.onRenew,
+  });
 
   final LoanResponseDTO loan;
   final VoidCallback onTap;
+  final bool renewalPending;
+  final VoidCallback? onRenew;
 
   @override
   Widget build(BuildContext context) {
@@ -680,47 +1150,68 @@ class _LoanCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  'Phiếu ${loan.id}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF25364A),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Phiếu ${loan.id}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF25364A),
+                      ),
+                    ),
+                  ),
+                  _StatusBadge(status: loan.status),
+                ],
+              ),
+              const Divider(height: 22),
+              _LoanField(label: 'Ngày yêu cầu', date: loan.requestedAt),
+              _LoanField(label: 'Ngày mượn', date: loan.borrowedAt),
+              _LoanField(label: 'Hạn trả', date: loan.dueAt),
+              _LoanField(label: 'Ngày trả', date: loan.returnedAt),
+              Text(
+                '${loan.items.length} đầu sách  ·  Đã gia hạn ${loan.renewCount} lần',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF667085)),
+              ),
+              if (loan.items.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                for (var index = 0; index < loan.items.length; index++)
+                  _LoanItemTile(item: loan.items[index], index: index),
+              ],
+              if (loan.rejectionReason?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                Text(
+                  loan.rejectionReason!,
+                  style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+                ),
+              ],
+              if (onRenew != null || renewalPending) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: renewalPending ? null : onRenew,
+                    icon: renewalPending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.update_rounded, size: 18),
+                    label: Text(
+                      renewalPending
+                          ? 'Đang chờ duyệt gia hạn'
+                          : 'Yêu cầu gia hạn',
+                    ),
                   ),
                 ),
-              ),
-              _StatusBadge(status: loan.status),
+              ],
             ],
-          ),
-          const Divider(height: 22),
-          _LoanField(label: 'Ngày yêu cầu', date: loan.requestedAt),
-          _LoanField(label: 'Ngày mượn', date: loan.borrowedAt),
-          _LoanField(label: 'Hạn trả', date: loan.dueAt),
-          _LoanField(label: 'Ngày trả', date: loan.returnedAt),
-          Text(
-            '${loan.items.length} đầu sách  ·  Đã gia hạn ${loan.renewCount} lần',
-            style: const TextStyle(fontSize: 12, color: Color(0xFF667085)),
-          ),
-          if (loan.items.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            for (var index = 0; index < loan.items.length; index++)
-              _LoanItemTile(item: loan.items[index], index: index),
-          ],
-          if (loan.rejectionReason?.isNotEmpty == true) ...[
-            const SizedBox(height: 8),
-            Text(
-              loan.rejectionReason!,
-              style: const TextStyle(fontSize: 12, color: Colors.redAccent),
-            ),
-          ],
-        ],
           ),
         ),
       ),
@@ -735,7 +1226,14 @@ class _LoanDetailsDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(loanUserDetailsProvider(loan.userId));
+    final currentUser = ref.watch(loanCurrentUserInfoProvider);
+    final isStaff = currentUser?.roles.any((role) {
+          final value = role.toUpperCase();
+          return value == 'ADMIN' || value == 'LIBRARIAN' || value == 'STAFF';
+        }) ??
+        false;
+    final userAsync =
+        isStaff ? ref.watch(loanUserDetailsProvider(loan.userId)) : null;
     return AlertDialog(
       title: const Text('Chi tiết mượn - trả'),
       content: SizedBox(
@@ -744,51 +1242,63 @@ class _LoanDetailsDialog extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              userAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (error, stack) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _DetailSection(
-                      title: 'Người mượn',
-                      rows: [_DetailRow('Mã người dùng', loan.userId)],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _loanRequestErrorMessage(
-                        error,
-                        action: 'tải thông tin người mượn',
+              if (userAsync != null)
+                userAsync.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (error, stack) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _DetailSection(
+                        title: 'Người mượn',
+                        rows: [_DetailRow('Mã người dùng', loan.userId)],
                       ),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.redAccent,
+                      const SizedBox(height: 4),
+                      Text(
+                        _loanRequestErrorMessage(
+                          error,
+                          action: 'tải thông tin người mượn',
+                        ),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.redAccent,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () =>
-                          ref.invalidate(loanUserDetailsProvider(loan.userId)),
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Thử tải lại'),
-                    ),
-                  ],
-                ),
-                data: (user) => _DetailSection(
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => ref
+                            .invalidate(loanUserDetailsProvider(loan.userId)),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Thử tải lại'),
+                      ),
+                    ],
+                  ),
+                  data: (user) => _DetailSection(
+                    title: 'Người mượn',
+                    rows: [
+                      _DetailRow('Mã người dùng', user.id),
+                      _DetailRow('Họ tên', user.fullName),
+                      _DetailRow('Email', user.email),
+                      if (user.phone?.isNotEmpty == true)
+                        _DetailRow('Điện thoại', user.phone!),
+                      _DetailRow('Vai trò', user.role),
+                      _DetailRow('Trạng thái', user.status),
+                    ],
+                  ),
+                )
+              else
+                _DetailSection(
                   title: 'Người mượn',
                   rows: [
-                    _DetailRow('Mã người dùng', user.id),
-                    _DetailRow('Họ tên', user.fullName),
-                    _DetailRow('Email', user.email),
-                    if (user.phone?.isNotEmpty == true)
-                      _DetailRow('Điện thoại', user.phone!),
-                    _DetailRow('Vai trò', user.role),
-                    _DetailRow('Trạng thái', user.status),
+                    _DetailRow('Mã người dùng', loan.userId),
+                    if (currentUser?.fullName.trim().isNotEmpty == true)
+                      _DetailRow('Họ tên', currentUser!.fullName),
+                    if (currentUser?.email.trim().isNotEmpty == true)
+                      _DetailRow('Email', currentUser!.email),
                   ],
                 ),
-              ),
               const SizedBox(height: 18),
               _DetailSection(
                 title: 'Phiếu mượn',
@@ -796,7 +1306,8 @@ class _LoanDetailsDialog extends ConsumerWidget {
                   _DetailRow('Mã phiếu', loan.id),
                   _DetailRow('Trạng thái', loan.status),
                   _DetailRow('Số lần gia hạn', '${loan.renewCount}'),
-                  _DetailRow('Ngày yêu cầu', _formatDetailDate(loan.requestedAt)),
+                  _DetailRow(
+                      'Ngày yêu cầu', _formatDetailDate(loan.requestedAt)),
                   _DetailRow('Ngày duyệt', _formatDetailDate(loan.approvedAt)),
                   _DetailRow('Ngày mượn', _formatDetailDate(loan.borrowedAt)),
                   _DetailRow('Hạn trả', _formatDetailDate(loan.dueAt)),
@@ -864,7 +1375,8 @@ class _DetailRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 125,
-            child: Text(label, style: const TextStyle(color: Color(0xFF667085))),
+            child:
+                Text(label, style: const TextStyle(color: Color(0xFF667085))),
           ),
           Expanded(child: Text(value)),
         ],
@@ -901,9 +1413,12 @@ class _LoanDetailItem extends StatelessWidget {
       leading: const Icon(Icons.menu_book_outlined),
       title: Text(heading),
       subtitle: Text([
+        if (item['id'] != null) 'Mã mục: ${item['id']}',
         if (item['itemStatus'] != null) 'Trạng thái: ${item['itemStatus']}',
         if (copyId != null) 'Bản sao: $copyId',
         if (item['returnedAt'] != null) 'Đã trả: ${item['returnedAt']}',
+        if (item['conditionOnReturn'] != null)
+          'Tình trạng khi trả: ${item['conditionOnReturn']}',
         if (fine != null) 'Tiền phạt: $fine',
       ].join(' · ')),
     );
@@ -1004,11 +1519,12 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isBorrowed = status.toUpperCase() == 'BORROWED';
-    final color = isBorrowed ? const Color(0xFF25824B) : const Color(0xFF1876D2);
+    final color =
+        isBorrowed ? const Color(0xFF25824B) : const Color(0xFF1876D2);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
