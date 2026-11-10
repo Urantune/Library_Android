@@ -35,7 +35,7 @@ class ApiAuthService implements AuthService {
       response = await _dio.post('/api/auth/login',
           data: request.toJson(), options: Options(extra: {'skipAuth': true}));
     } on DioException catch (error) {
-      return AuthResponse.failure(messageFor(error));
+      return AuthResponse.failure(messageFor(error), connectionError: isConnectionError(error));
     }
 
     late final Map<String, dynamic> session;
@@ -79,7 +79,7 @@ class ApiAuthService implements AuthService {
           user: User.fromJson(_data(response)),
           message: 'Đăng ký thành công. Hãy đăng nhập để tiếp tục.');
     } on DioException catch (error) {
-      return AuthResponse.failure(messageFor(error));
+      return AuthResponse.failure(messageFor(error), connectionError: isConnectionError(error));
     } catch (_) {
       return const AuthResponse.failure('Không thể đọc phản hồi đăng ký.');
     }
@@ -147,5 +147,14 @@ class ApiAuthService implements AuthService {
         'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
       _ => 'Không thể xử lý lúc này. Vui lòng thử lại sau.',
     };
+  }
+
+  static bool isConnectionError(DioException error) {
+    final status = error.response?.statusCode;
+    return (status != null && status >= 500) ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.connectionError;
   }
 }

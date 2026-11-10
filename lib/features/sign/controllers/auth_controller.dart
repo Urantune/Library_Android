@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/token_storage.dart';
@@ -38,8 +39,11 @@ class AuthState {
 }
 
 class AuthController extends Notifier<AuthState> {
+  Timer? _retryTimer;
+  bool _checkingConnection = false;
   @override
   AuthState build() {
+    ref.onDispose(() => _retryTimer?.cancel());
     Future.microtask(restore);
     return const AuthState(isRestoring: true);
   }
@@ -72,6 +76,7 @@ class AuthController extends Notifier<AuthState> {
     if (state.isLoading || state.isRestoring) {
       return const AuthResponse.failure('Yêu cầu đang được xử lý.');
     }
+    _retryTimer?.cancel();
     state = AuthState(user: state.user, isLoading: true);
     AuthResponse result;
     try {
@@ -84,6 +89,7 @@ class AuthController extends Notifier<AuthState> {
       state = AuthState(
           user: signIn && result.success ? result.user : state.user,
           errorMessage: result.success ? null : result.message);
+      if (result.connectionError) _scheduleConnectionCheck(result.message);
     }
     return result;
   }
@@ -115,9 +121,27 @@ class AuthController extends Notifier<AuthState> {
   }
 
   void clearError() {
+    _retryTimer?.cancel();
     state = AuthState(
         user: state.user,
         isLoading: state.isLoading,
         isRestoring: state.isRestoring);
+  }
+
+  void _scheduleConnectionCheck(String errorMessage) {
+    _retryTimer?.cancel();
+    _retryTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      if (_checkingConnection) return;
+      _checkingConnection = true;
+      final dio = Dio(BaseOptions(baseUrl: AuthConfig.baseUrl, connectTimeout: const Duration(seconds: 1), receiveTimeout: const Duration(seconds: 1)));
+      try {
+        final response = await dio.get('/identity/actuator/health');
+        if (ref.mounted && state.errorMessage == errorMessage && response.data is Map && response.data['status'] == 'UP') clearError();
+      } catch (_) {
+      } finally {
+        dio.close(force: true);
+        _checkingConnection = false;
+      }
+    });
   }
 }
