@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/models/user_role.dart';
 import '../../domain/entities/user.dart';
 import '../providers/user_provider.dart';
 import 'user_form_screen.dart';
@@ -48,8 +49,7 @@ class UserDetailScreen extends ConsumerWidget {
                 Text(error.toString(), textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 FilledButton.icon(
-                  onPressed: () =>
-                      ref.invalidate(userDetailProvider(userId)),
+                  onPressed: () => ref.invalidate(userDetailProvider(userId)),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Thử lại'),
                 ),
@@ -158,7 +158,7 @@ class _UserDetailContent extends ConsumerWidget {
                   _InfoRow(
                     icon: Icons.badge_outlined,
                     label: 'Vai trò',
-                    value: user.role.toUpperCase(),
+                    value: roleLabel(user.role),
                   ),
                   const Divider(height: 24),
                   _InfoRow(
@@ -376,10 +376,6 @@ class _RoleChip extends StatelessWidget {
         bgColor = const Color(0xFFFEF3C7);
         textColor = const Color(0xFF92400E);
         break;
-      case 'STAFF':
-        bgColor = const Color(0xFFDBEAFE);
-        textColor = const Color(0xFF1E40AF);
-        break;
       default:
         bgColor = const Color(0xFFF1F5F9);
         textColor = const Color(0xFF475569);
@@ -392,7 +388,7 @@ class _RoleChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        role.toUpperCase(),
+        roleLabel(role),
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,

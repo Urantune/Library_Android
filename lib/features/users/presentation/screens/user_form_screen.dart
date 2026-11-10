@@ -21,7 +21,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   late TextEditingController _fullNameController;
   late TextEditingController _phoneController;
   late TextEditingController _passwordController;
-  String _selectedRole = 'USER';
+  String _selectedRole = 'MEMBER';
   bool _isSubmitting = false;
 
   bool get isEditing => widget.user != null;
@@ -37,7 +37,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
         TextEditingController(text: widget.user?.fullName ?? '');
     _phoneController = TextEditingController(text: widget.user?.phone ?? '');
     _passwordController = TextEditingController();
-    _selectedRole = widget.user?.role ?? 'USER';
+    _selectedRole = _roleValue(widget.user?.role);
   }
 
   @override
@@ -56,7 +56,11 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
         title: Text(
-          profileOnly ? 'Cập nhật hồ sơ' : isEditing ? 'Sửa người dùng' : 'Thêm người dùng',
+          profileOnly
+              ? 'Cập nhật hồ sơ'
+              : isEditing
+                  ? 'Sửa người dùng'
+                  : 'Thêm người dùng',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
@@ -93,23 +97,24 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      if (!profileOnly) TextFormField(
-                        controller: _usernameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Tên đăng nhập *',
-                          prefixIcon: Icon(Icons.account_circle_outlined),
-                          border: OutlineInputBorder(),
+                      if (!profileOnly)
+                        TextFormField(
+                          controller: _usernameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Tên đăng nhập *',
+                            prefixIcon: Icon(Icons.account_circle_outlined),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Vui lòng nhập tên đăng nhập';
+                            }
+                            if (value.trim().length < 3) {
+                              return 'Tên đăng nhập ít nhất 3 ký tự';
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Vui lòng nhập tên đăng nhập';
-                          }
-                          if (value.trim().length < 3) {
-                            return 'Tên đăng nhập ít nhất 3 ký tự';
-                          }
-                          return null;
-                        },
-                      ),
                       if (!isEditing && !profileOnly) ...[
                         const SizedBox(height: 16),
                         TextFormField(
@@ -129,24 +134,25 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      if (!profileOnly) TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email *',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
+                      if (!profileOnly)
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            labelText: 'Email *',
+                            prefixIcon: Icon(Icons.email_outlined),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Vui lòng nhập email';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Email không hợp lệ';
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Vui lòng nhập email';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Email không hợp lệ';
-                          }
-                          return null;
-                        },
-                      ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _phoneController,
@@ -158,27 +164,26 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      if (!profileOnly) DropdownButtonFormField<String>(
-                        initialValue: _selectedRole,
-                        decoration: const InputDecoration(
-                          labelText: 'Vai trò',
-                          prefixIcon: Icon(Icons.shield_outlined),
-                          border: OutlineInputBorder(),
+                      if (!profileOnly)
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedRole,
+                          decoration: const InputDecoration(
+                            labelText: 'Vai trò',
+                            prefixIcon: Icon(Icons.shield_outlined),
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'MEMBER', child: Text('Độc giả')),
+                            DropdownMenuItem(
+                                value: 'ADMIN', child: Text('Quản trị viên')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _selectedRole = value);
+                            }
+                          },
                         ),
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'USER', child: Text('User')),
-                          DropdownMenuItem(
-                              value: 'STAFF', child: Text('Staff')),
-                          DropdownMenuItem(
-                              value: 'ADMIN', child: Text('Admin')),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _selectedRole = value);
-                          }
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -271,4 +276,9 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       }
     }
   }
+}
+
+/// Đưa mã vai trò (kể cả mã cũ USER/STAFF/LIBRARIAN) về đúng giá trị dropdown.
+String _roleValue(String? role) {
+  return (role ?? '').toUpperCase() == 'ADMIN' ? 'ADMIN' : 'MEMBER';
 }

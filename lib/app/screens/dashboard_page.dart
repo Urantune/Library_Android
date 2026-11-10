@@ -25,15 +25,12 @@ import 'user_dashboard_home.dart';
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
-  /// ADMIN/LIBRARIAN dùng dashboard quản trị; MEMBER dùng dashboard độc giả.
+  /// Chỉ ADMIN dùng dashboard quản trị; còn lại là độc giả (MEMBER).
   bool _isStaff(WidgetRef ref) {
     final roles = ref.watch(
       authControllerProvider.select((state) => state.user?.roles ?? const []),
     );
-    return roles.any((role) {
-      final value = role.toUpperCase();
-      return value == 'ADMIN' || value == 'LIBRARIAN' || value == 'STAFF';
-    });
+    return roles.any((role) => role.toUpperCase() == 'ADMIN');
   }
 
   Widget _buildBottomNavPage(int bottomNavIndex, bool isStaff) {
@@ -50,8 +47,9 @@ class DashboardPage extends ConsumerWidget {
             NotificationListScreen(),
             ProfileScreen(),
           ];
-    final index =
-        bottomNavIndex >= 0 && bottomNavIndex < pages.length ? bottomNavIndex : 0;
+    final index = bottomNavIndex >= 0 && bottomNavIndex < pages.length
+        ? bottomNavIndex
+        : 0;
     return pages[index];
   }
 
@@ -117,7 +115,6 @@ class DashboardPage extends ConsumerWidget {
                 ),
               ),
             ),
-
             if (showBottomNav)
               BottomNavBar(
                 currentIndex: nav.bottomNavIndex,

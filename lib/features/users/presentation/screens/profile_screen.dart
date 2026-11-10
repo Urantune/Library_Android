@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/models/user_role.dart';
 import '../../domain/entities/user.dart';
 import '../providers/user_provider.dart';
 import 'user_form_screen.dart';
@@ -31,11 +32,15 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 const Icon(Icons.cloud_off, size: 52, color: Colors.redAccent),
                 const SizedBox(height: 12),
-                Text(error.toString(), textAlign: TextAlign.center),
+                const Text(
+                  'Không tải được hồ sơ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(_readableError(error), textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 FilledButton.icon(
-                  onPressed: () =>
-                      ref.invalidate(currentUserProvider),
+                  onPressed: () => ref.invalidate(currentUserProvider),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Thử lại'),
                 ),
@@ -164,7 +169,7 @@ class _ProfileContent extends ConsumerWidget {
                   _InfoRow(
                     icon: Icons.badge_outlined,
                     label: 'Vai trò',
-                    value: user.role.toUpperCase(),
+                    value: roleLabel(user.role),
                   ),
                   const Divider(height: 24),
                   _InfoRow(
@@ -190,7 +195,8 @@ class _ProfileContent extends ConsumerWidget {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => UserFormScreen(user: user, profileOnly: true),
+                    builder: (_) =>
+                        UserFormScreen(user: user, profileOnly: true),
                   ),
                 );
               },
@@ -263,10 +269,6 @@ class _RoleChip extends StatelessWidget {
         bgColor = const Color(0xFFFEF3C7);
         textColor = const Color(0xFF92400E);
         break;
-      case 'STAFF':
-        bgColor = const Color(0xFFDBEAFE);
-        textColor = const Color(0xFF1E40AF);
-        break;
       default:
         bgColor = const Color(0xFFF1F5F9);
         textColor = const Color(0xFF475569);
@@ -279,7 +281,7 @@ class _RoleChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        role.toUpperCase(),
+        roleLabel(role),
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
@@ -314,6 +316,14 @@ class _StatusChip extends StatelessWidget {
       ),
     );
   }
+}
+
+String _readableError(Object error) {
+  const prefix = 'Exception: ';
+  final message = error.toString();
+  return message.startsWith(prefix)
+      ? message.substring(prefix.length)
+      : message;
 }
 
 String _formatDate(DateTime? date) {

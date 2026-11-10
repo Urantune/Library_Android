@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/models/user_role.dart';
 import '../../domain/entities/user.dart';
 import '../providers/user_provider.dart';
 import 'user_detail_screen.dart';
@@ -87,11 +88,13 @@ class _UserListScreenState extends ConsumerState<UserListScreen> {
                         ),
                         items: const [
                           DropdownMenuItem(value: null, child: Text('Tất cả')),
-                          DropdownMenuItem(value: 'ADMIN', child: Text('Admin')),
-                          DropdownMenuItem(value: 'STAFF', child: Text('Staff')),
-                          DropdownMenuItem(value: 'USER', child: Text('User')),
+                          DropdownMenuItem(
+                              value: 'ADMIN', child: Text('Quản trị viên')),
+                          DropdownMenuItem(
+                              value: 'MEMBER', child: Text('Độc giả')),
                         ],
-                        onChanged: (value) => setState(() => roleFilter = value),
+                        onChanged: (value) =>
+                            setState(() => roleFilter = value),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -212,9 +215,7 @@ class _UserCard extends StatelessWidget {
                 radius: 27,
                 backgroundColor: const Color(0xFFE6EDFF),
                 child: Text(
-                  user.fullName.isEmpty
-                      ? '?'
-                      : user.fullName[0].toUpperCase(),
+                  user.fullName.isEmpty ? '?' : user.fullName[0].toUpperCase(),
                   style: const TextStyle(
                     color: Color(0xFF3157B7),
                     fontSize: 21,
@@ -273,10 +274,6 @@ class _RoleChip extends StatelessWidget {
         bgColor = const Color(0xFFFEF3C7);
         textColor = const Color(0xFF92400E);
         break;
-      case 'STAFF':
-        bgColor = const Color(0xFFDBEAFE);
-        textColor = const Color(0xFF1E40AF);
-        break;
       default:
         bgColor = const Color(0xFFF1F5F9);
         textColor = const Color(0xFF475569);
@@ -289,7 +286,7 @@ class _RoleChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        role.toUpperCase(),
+        roleLabel(role),
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,

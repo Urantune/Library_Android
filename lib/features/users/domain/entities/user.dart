@@ -29,7 +29,7 @@ class User {
       fullName: (json['fullName'] ?? json['full_name'] ?? '').toString(),
       phone: json['phone']?.toString(),
       role: _normalizeRole(
-        (json['role'] ?? _firstRole(json['roles']) ?? 'USER').toString(),
+        (json['role'] ?? _firstRole(json['roles']) ?? 'MEMBER').toString(),
       ),
       status: (json['status'] ?? 'ACTIVE').toString(),
       createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
@@ -78,14 +78,18 @@ class User {
     return DateTime.tryParse(value.toString());
   }
 
+  /// DB chỉ dùng 2 vai trò: MEMBER (Độc giả) và ADMIN (Quản trị viên).
+  /// Vẫn nhận mã cũ (USER/STAFF/LIBRARIAN) để không vỡ dữ liệu cũ.
   static String _normalizeRole(String role) {
     switch (role.toUpperCase()) {
+      case 'ADMIN':
+        return 'ADMIN';
       case 'MEMBER':
-        return 'USER';
+      case 'USER':
+      case 'STAFF':
       case 'LIBRARIAN':
-        return 'STAFF';
       default:
-        return role.toUpperCase();
+        return 'MEMBER';
     }
   }
 

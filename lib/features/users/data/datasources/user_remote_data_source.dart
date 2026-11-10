@@ -129,11 +129,9 @@ class UserRemoteDataSource {
         await _dio.patch('/api/users/$id/status', data: {'status': 'ACTIVE'});
       });
 
-  String _apiRole(String role) => switch (role.toUpperCase()) {
-        'USER' || 'MEMBER' => 'MEMBER',
-        'STAFF' || 'LIBRARIAN' => 'LIBRARIAN',
-        _ => 'ADMIN',
-      };
+  /// DB chỉ có 2 vai trò: MEMBER (Độc giả) và ADMIN (Quản trị viên).
+  String _apiRole(String role) =>
+      role.toUpperCase() == 'ADMIN' ? 'ADMIN' : 'MEMBER';
 
   /// Chuyển lỗi Dio thành thông điệp dễ hiểu cho người dùng.
   Future<T> _guard<T>(Future<T> Function() call) async {

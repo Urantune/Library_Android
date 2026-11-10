@@ -3,8 +3,7 @@ String roleLabel(String? role) {
   switch (value.toUpperCase()) {
     case 'ADMIN':
       return 'Quản trị viên';
-    case 'LIBRARIAN':
-      return 'Thủ thư';
+    case 'MEMBER':
     case 'USER':
     case '':
       return 'Độc giả';
