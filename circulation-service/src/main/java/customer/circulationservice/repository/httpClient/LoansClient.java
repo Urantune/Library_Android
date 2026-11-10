@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 @FeignClient(
         name = "identity-service",
-        url = "${service.identity.url}",
         configuration = FeignClientConfig.class
 )
 public interface LoansClient {
