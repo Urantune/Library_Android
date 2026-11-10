@@ -20,6 +20,9 @@ public enum ErrorCode {
     RENEWAL_ALREADY_PENDING(1011, "A renewal request is already pending", HttpStatus.CONFLICT),
     ADMIN_ACCESS_DENIED(1012, "Administrator role is required", HttpStatus.FORBIDDEN),
     LOAN_NOT_APPROVABLE(1013, "Loan is not in a state that can be approved", HttpStatus.CONFLICT),
+    RENEWAL_NOT_FOUND(1015, "Renewal request not found", HttpStatus.NOT_FOUND),
+    RENEWAL_ACCESS_DENIED(1016, "Renewal request does not belong to the current user", HttpStatus.FORBIDDEN),
+    RENEWAL_NOT_PENDING(1017, "Renewal request is not in a pending state", HttpStatus.CONFLICT),
     LOAN_NOT_REJECTABLE(1014, "Loan is not in a state that can be rejected", HttpStatus.CONFLICT);
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

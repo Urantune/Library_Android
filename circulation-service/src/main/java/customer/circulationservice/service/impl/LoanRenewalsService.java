@@ -10,9 +10,16 @@ import customer.circulationservice.mapper.LoanRenewalsMapper;
 import customer.circulationservice.repository.LoanRenewalsRepository;
 import customer.circulationservice.repository.LoansRepository;
 import customer.circulationservice.service.ILoanRenewals;
+
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
@@ -38,27 +45,61 @@ public class LoanRenewalsService implements ILoanRenewals {
             throw new AppException(ErrorCode.LOAN_NOT_RENEWABLE);
         }
 
+        Instant now = Instant.now();
+        LocalDate dueDate;
         try {
-            if (!Instant.parse(loan.getDueAt()).isAfter(Instant.now())) {
-                throw new AppException(ErrorCode.LOAN_NOT_RENEWABLE);
-            }
+            dueDate = LocalDate.parse(loan.getDueAt());
         } catch (DateTimeParseException exception) {
             throw new AppException(ErrorCode.LOAN_NOT_RENEWABLE);
         }
 
-        if (renewalsRepository.existsByLoanIdAndStatus(loan.getId(), "REQUESTED")) {
-            throw new AppException(ErrorCode.RENEWAL_ALREADY_PENDING);
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        if (!dueDate.isAfter(today)) {
+            throw new AppException(ErrorCode.LOAN_NOT_RENEWABLE);
         }
 
         LoanRenewals renewal = new LoanRenewals();
         renewal.setId(UUID.randomUUID().toString());
         renewal.setLoanId(loan.getId());
         renewal.setRequestedBy(userId);
-        renewal.setRequestedAt(Instant.now().toString());
-        renewal.setPreviousDueAt(loan.getDueAt());
+        renewal.setRequestedAt(now.toString());
+        LocalDate newDueDate = dueDate.plusDays(7);
+        renewal.setPreviousDueAt(dueDate.toString());
+        renewal.setNewDueAt(newDueDate.toString());
         renewal.setStatus("REQUESTED");
         renewal.setReason(request.getReason());
 
         return renewalsMapper.toResponse(renewalsRepository.save(renewal));
+    }
+
+    @Transactional
+    public LoanRenewalResponseDTO approveRenewal(String renewalId, String adminUserId) {
+        LoanRenewals renewal = renewalsRepository.findById(renewalId)
+                .orElseThrow(() -> new AppException(ErrorCode.RENEWAL_NOT_FOUND));
+
+        if (!"REQUESTED".equals(renewal.getStatus())) {
+            throw new AppException(ErrorCode.RENEWAL_NOT_PENDING);
+        }
+
+        Loans loan = loansRepository.findById(renewal.getLoanId())
+                .orElseThrow(() -> new AppException(ErrorCode.LOAN_NOT_FOUND));
+
+        loan.setDueAt(renewal.getNewDueAt());
+        loan.setRenewCount(loan.getRenewCount() + 1);
+        loan.setUpdatedAt(Instant.now().toString());
+        loansRepository.save(loan);
+
+        renewal.setStatus("APPROVED");
+        renewal.setApprovedBy(adminUserId);
+        renewal.setDecisionAt(Instant.now().toString());
+
+        return renewalsMapper.toResponse(renewalsRepository.save(renewal));
+    }
+
+    @Override
+    public List<LoanRenewalResponseDTO> getRenewal() {
+        return renewalsRepository.findAll().stream()
+                .map(renewalsMapper::toResponse)
+                .collect(Collectors.toList());
     }
 }
