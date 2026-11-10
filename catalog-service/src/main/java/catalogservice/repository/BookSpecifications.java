@@ -20,6 +20,7 @@ public final class BookSpecifications {
                 predicates.add(builder.or(
                     builder.like(builder.lower(root.<String>get("title")), pattern),
                     builder.like(builder.lower(root.<String>get("isbn")), pattern),
+                    builder.like(builder.lower(root.joinSet("authors", jakarta.persistence.criteria.JoinType.LEFT).<String>get("name")), pattern),
                     builder.like(builder.lower(root.<String>get("description")), pattern)
                 ));
             }

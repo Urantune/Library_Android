@@ -34,7 +34,7 @@ public class AuthRepository {
     public void insertUser(String id, String email, String name, String hash, Instant now) {
         jdbc.update("INSERT INTO users(id,email,password_hash,full_name,status,created_at,updated_at) VALUES(?,?,?,?,'ACTIVE',?,?)",
             id,email,hash,name,now.toString(),now.toString());
-        jdbc.update("INSERT INTO user_roles(user_id,role_id,assigned_at) SELECT ?,id,? FROM roles WHERE code='MEMBER'",id,now.toString());
+        jdbc.update("INSERT INTO user_roles(user_id,role_id,assigned_at) SELECT ?,id,? FROM roles WHERE code='USER'",id,now.toString());
     }
 
     public void createSession(String id, String userId, Instant expires, Instant now) {

@@ -8,6 +8,6 @@ public record BookResponse(
     String language, Integer pageCount, String coverUrl, String status,
     NamedReference publisher, List<NamedReference> authors, List<NamedReference> categories,
     int totalCopies, long availableCopies, Instant createdAt, Instant updatedAt
-) {
-    public record NamedReference(String id, String name) {}
+) implements java.io.Serializable {
+    public record NamedReference(String id, String name) implements java.io.Serializable {}
 }

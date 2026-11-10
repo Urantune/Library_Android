@@ -12,7 +12,6 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
@@ -27,7 +26,7 @@ import org.springframework.util.StreamUtils;
 
 @Component
 public class PublisherAuthGuard {
-    private static final Set<String> STAFF_ROLES = Set.of("LIBRARIAN", "ADMIN");
+    private static final Set<String> STAFF_ROLES = Set.of("ADMIN");
 
     private final ObjectMapper mapper;
     private final Resource publicKeyResource;
@@ -65,22 +64,27 @@ public class PublisherAuthGuard {
         if (authHeader != null && !authHeader.isBlank()) {
             VerifiedClaims claims = verifyBearerToken(authHeader);
             if (claims.roles().stream().noneMatch(STAFF_ROLES::contains)) {
-                throw new PublisherException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Staff role (LIBRARIAN or ADMIN) is required");
+                throw new PublisherException(HttpStatus.FORBIDDEN, "FORBIDDEN", "ADMIN role is required");
             }
             return;
         }
         String gatewayRoles = request.getHeader("X-User-Roles");
         if (gatewayRoles != null && !gatewayRoles.isBlank()) {
-            boolean isStaff = Arrays.stream(gatewayRoles.split(","))
-                    .map(String::trim)
-                    .anyMatch(STAFF_ROLES::contains);
-            if (!isStaff) {
-                throw new PublisherException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Staff role (LIBRARIAN or ADMIN) is required");
-            }
-            return;
+            throw new PublisherException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Bearer token required to verify roles");
         }
         if (requireJwt) {
             throw new PublisherException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Missing Bearer token");
+        }
+    }
+
+    public void authorizeBookWrite(HttpServletRequest request) {
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || authHeader.isBlank()) {
+            throw new PublisherException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Missing Bearer token");
+        }
+        VerifiedClaims claims = verifyBearerToken(authHeader);
+        if (claims.roles().stream().noneMatch(STAFF_ROLES::contains)) {
+            throw new PublisherException(HttpStatus.FORBIDDEN, "FORBIDDEN", "ADMIN role is required");
         }
     }
 

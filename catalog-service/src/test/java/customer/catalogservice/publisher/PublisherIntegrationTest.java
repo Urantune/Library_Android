@@ -232,10 +232,9 @@ class PublisherIntegrationTest {
                     .andExpect(jsonPath("$.status").value(400));
         }
 
-        // JWT RBAC: invalid token -> 401; MEMBER -> 403 on write, 200 on read; LIBRARIAN -> 201 on write
-        String memberJwt = signJwt("user-member-1", List.of("MEMBER"), Instant.now().plusSeconds(300));
-        String staffJwt = signJwt("user-staff-1", List.of("LIBRARIAN"), Instant.now().plusSeconds(300));
-        String expiredJwt = signJwt("user-staff-1", List.of("LIBRARIAN"), Instant.now().minusSeconds(60));
+        String memberJwt = signJwt("user-member-1", List.of("USER"), Instant.now().plusSeconds(300));
+        String staffJwt = signJwt("user-staff-1", List.of("ADMIN"), Instant.now().plusSeconds(300));
+        String expiredJwt = signJwt("user-staff-1", List.of("ADMIN"), Instant.now().minusSeconds(60));
 
         mvc.perform(get("/api/publishers").header("Authorization", "Bearer " + expiredJwt))
                 .andExpect(status().isUnauthorized())

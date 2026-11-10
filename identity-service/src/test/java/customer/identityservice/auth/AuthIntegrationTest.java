@@ -42,7 +42,7 @@ class AuthIntegrationTest {
     }
     private void register() throws Exception {
         mvc.perform(post("/api/auth/register").contentType("application/json").content(registerBody("khang@example.com")))
-            .andExpect(status().isCreated()).andExpect(jsonPath("$.data.roles[0]").value("MEMBER"));
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.data.roles[0]").value("USER"));
     }
     private Map<String,Object> login() throws Exception {
         String body=json.writeValueAsString(Map.of("email","KHANG@example.com","password",PASSWORD));

@@ -5,6 +5,14 @@ import catalogservice.entity.Book;
 import catalogservice.enums.BookStatus;
 import catalogservice.repository.BookRepository;
 import java.util.UUID;
+import java.util.Base64;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.Signature;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +29,27 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(classes = CatalogServiceApplication.class,
     properties = {"eureka.client.enabled=false", "spring.cloud.discovery.enabled=false", "app.seed.books=false"})
 class BookReadIntegrationTest {
     private static final String DB = "jdbc:sqlite:target/books-" + UUID.randomUUID() + ".db";
+    private static final KeyPair KEYS;
+    private static final Path PUBLIC_KEY;
+    static {
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            KEYS = generator.generateKeyPair();
+            PUBLIC_KEY = Path.of("target", "book-key-" + UUID.randomUUID() + ".pem").toAbsolutePath();
+            Files.createDirectories(PUBLIC_KEY.getParent());
+            Files.writeString(PUBLIC_KEY, "-----BEGIN PUBLIC KEY-----\n"
+                + Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(KEYS.getPublic().getEncoded())
+                + "\n-----END PUBLIC KEY-----\n");
+        } catch (Exception ex) { throw new ExceptionInInitializerError(ex); }
+    }
     private static final String ID = "9a3019b0-786b-4000-8000-000000000001";
     @Autowired WebApplicationContext context;
     @Autowired JdbcTemplate jdbc;
@@ -37,11 +60,13 @@ class BookReadIntegrationTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> DB);
+        registry.add("security.jwt.public-key", () -> "file:" + PUBLIC_KEY);
     }
 
     @BeforeEach
-    void prepare() {
-        mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    void prepare() throws Exception {
+        mvc = MockMvcBuilders.webAppContextSetup(context)
+            .defaultRequest(get("/").header("Authorization", token("ADMIN"))).build();
         for (String cacheName : new String[]{"book-pages", "book-details"}) {
             var cache = cacheManager.getCache(cacheName);
             if (cache != null) cache.clear();
@@ -54,6 +79,17 @@ class BookReadIntegrationTest {
         jdbc.update("INSERT INTO books(id,isbn,title,status,created_at,updated_at) VALUES('active-2','0003','Effective Java','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         jdbc.update("INSERT INTO book_copies(id,book_id,accession_code,condition,circulation_status,created_at,updated_at) VALUES('copy-1',?,'ACC-1','GOOD','AVAILABLE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", ID);
         jdbc.update("INSERT INTO book_copies(id,book_id,accession_code,condition,circulation_status,created_at,updated_at) VALUES('copy-2',?,'ACC-2','GOOD','BORROWED',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", ID);
+    }
+
+    private static String token(String role) throws Exception {
+        var encoder = Base64.getUrlEncoder().withoutPadding();
+        String header = encoder.encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
+        String body = encoder.encodeToString(("{\"sub\":\"test\",\"iss\":\"library-identity\",\"aud\":\"library-api\",\"exp\":"
+            + (Instant.now().getEpochSecond() + 3600) + ",\"roles\":[\"" + role + "\"]}").getBytes(StandardCharsets.UTF_8));
+        Signature signature = Signature.getInstance("SHA256withRSA");
+        signature.initSign(KEYS.getPrivate());
+        signature.update((header + "." + body).getBytes(StandardCharsets.US_ASCII));
+        return "Bearer " + header + "." + body + "." + encoder.encodeToString(signature.sign());
     }
 
     @Test
@@ -72,6 +108,8 @@ class BookReadIntegrationTest {
     @Test
     void searchesActiveBooksByTextAndPublisher() throws Exception {
         jdbc.update("INSERT INTO publishers(id,name,status,created_at,updated_at) VALUES('pub-1','Khang Press','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO authors(id,name,status,created_at,updated_at) VALUES('author-1','Robert Martin','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO book_authors(book_id,author_id) VALUES(?,'author-1')", ID);
         jdbc.update("UPDATE books SET publisher_id='pub-1' WHERE id=?", ID);
 
         mvc.perform(get("/api/books").param("q", "clean"))
@@ -81,6 +119,9 @@ class BookReadIntegrationTest {
         mvc.perform(get("/api/books").param("publisherId", "pub-1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totalElements").value(1));
+        mvc.perform(get("/api/books").param("q", "robert"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[0].id").value(ID));
     }
 
     @Test
@@ -102,8 +143,8 @@ class BookReadIntegrationTest {
     void detailMapsRelationsAndCountsPhysicalCopies() throws Exception {
         mvc.perform(get("/api/books/" + ID))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.publisher").doesNotExist())
-            .andExpect(jsonPath("$.data.authors").doesNotExist())
-            .andExpect(jsonPath("$.data.categories").doesNotExist())
+            .andExpect(jsonPath("$.data.authors").isEmpty())
+            .andExpect(jsonPath("$.data.categories").isEmpty())
             .andExpect(jsonPath("$.data.pageCount").value(464))
             .andExpect(jsonPath("$.data.totalCopies").value(2))
             .andExpect(jsonPath("$.data.availableCopies").value(1));
@@ -148,7 +189,7 @@ class BookReadIntegrationTest {
             .andExpect(status().isCreated()).andExpect(header().exists("Location"))
             .andExpect(jsonPath("$.status").value(201))
             .andExpect(jsonPath("$.data.isbn").value("9780000000009"))
-            .andExpect(jsonPath("$.data.authors").doesNotExist())
+            .andExpect(jsonPath("$.data.authors").isEmpty())
             .andExpect(jsonPath("$.data.totalCopies").value(0));
         assertThat(books.findByIsbn("9780000000009")).isPresent();
     }
@@ -159,8 +200,8 @@ class BookReadIntegrationTest {
             .replace("\"author-1\"", "").replace("\"category-1\"", "");
         mvc.perform(put("/api/books/" + ID).contentType("application/json").content(input))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.title").value("A new book"))
-            .andExpect(jsonPath("$.data.authors").doesNotExist())
-            .andExpect(jsonPath("$.data.categories").doesNotExist())
+            .andExpect(jsonPath("$.data.authors").isEmpty())
+            .andExpect(jsonPath("$.data.categories").isEmpty())
             .andExpect(jsonPath("$.data.totalCopies").value(2));
         mvc.perform(get("/api/books/" + ID))
             .andExpect(jsonPath("$.data.title").value("A new book"));
@@ -232,14 +273,48 @@ class BookReadIntegrationTest {
         jdbc.update("INSERT INTO book_authors(book_id,author_id) VALUES(?,'other-author')", ID);
         jdbc.update("INSERT INTO book_categories(book_id,category_id) VALUES(?,'other-category')", ID);
         mvc.perform(get("/api/books/" + ID)).andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.publisher").doesNotExist())
-            .andExpect(jsonPath("$.data.authors").doesNotExist())
-            .andExpect(jsonPath("$.data.categories").doesNotExist());
+            .andExpect(jsonPath("$.data.publisher.id").value("other-publisher"))
+            .andExpect(jsonPath("$.data.authors[0].id").value("other-author"))
+            .andExpect(jsonPath("$.data.categories[0].id").value("other-category"));
         mvc.perform(put("/api/books/" + ID).contentType("application/json")
-            .content(INPUT.replace("978-0000000009", "9780132350884")))
+            .content(INPUT.replace("978-0000000009", "9780132350884")
+                .replace("\"publisherId\":null", "\"publisherId\":\"other-publisher\"")
+                .replace("\"authorIds\":[]", "\"authorIds\":[\"other-author\"]")
+                .replace("\"categoryIds\":[]", "\"categoryIds\":[\"other-category\"]")))
             .andExpect(status().isOk());
         assertThat(jdbc.queryForObject("SELECT publisher_id FROM books WHERE id=?", String.class, ID)).isEqualTo("other-publisher");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM book_authors WHERE book_id=?", Integer.class, ID)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM book_categories WHERE book_id=?", Integer.class, ID)).isEqualTo(1);
+    }
+
+    @Test
+    void deniesBookWritesWithoutStaffToken() throws Exception {
+        mvc.perform(post("/api/books").header("Authorization", "")
+            .header("X-User-Roles", "ADMIN").contentType("application/json").content(INPUT))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/books").header("Authorization", token("USER"))
+            .contentType("application/json").content(INPUT)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/books").header("Authorization", token("ADMIN"))
+            .contentType("application/json").content(INPUT)).andExpect(status().isCreated());
+    }
+
+    @Test
+    void managesPhysicalCopiesWithoutChangingBorrowedCopies() throws Exception {
+        String response = mvc.perform(post("/api/books/" + ID + "/copies")
+            .contentType("application/json").content("{\"code\":\"COPY-NEW-1\",\"shelfLocation\":\"A1\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.data.status").value("AVAILABLE"))
+            .andReturn().getResponse().getContentAsString();
+        String copyId = com.jayway.jsonpath.JsonPath.read(response, "$.data.id");
+        mvc.perform(get("/api/books/" + ID + "/copies"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(3));
+        mvc.perform(patch("/api/books/" + ID + "/copies/" + copyId + "/status")
+            .contentType("application/json").content("{\"status\":\"DAMAGED\"}"))
+            .andExpect(status().isNoContent());
+        mvc.perform(patch("/api/books/" + ID + "/copies/copy-2/status")
+            .contentType("application/json").content("{\"status\":\"LOST\"}"))
+            .andExpect(status().isConflict());
+        mvc.perform(post("/api/books/" + ID + "/copies").header("Authorization", token("USER"))
+            .contentType("application/json").content("{\"code\":\"COPY-NEW-2\"}"))
+            .andExpect(status().isForbidden());
     }
 }

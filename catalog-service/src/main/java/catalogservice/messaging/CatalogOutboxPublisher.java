@@ -25,6 +25,8 @@ public class CatalogOutboxPublisher {
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final int maxRetries;
+    @Value("${app.kafka.enabled:false}")
+    private boolean kafkaEnabled;
 
     public CatalogOutboxPublisher(
             CatalogOutboxRepository events,
@@ -42,6 +44,7 @@ public class CatalogOutboxPublisher {
 
     @Scheduled(fixedDelayString = "${app.catalog.outbox-poll-ms:5000}")
     public void scheduledPublish() {
+        if (!kafkaEnabled) return;
         publishPendingBatch(50);
     }
 

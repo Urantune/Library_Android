@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
-@RestControllerAdvice(assignableTypes = BookController.class)
+@RestControllerAdvice(assignableTypes = {BookController.class, BookCopyController.class})
 public class BookExceptionHandler {
     public record ErrorResponse(int status, String code, String message, Object data,
                                 Map<String, String> fieldErrors, Instant timestamp, String traceId) {}
@@ -58,6 +58,12 @@ public class BookExceptionHandler {
     public ResponseEntity<ErrorResponse> conflict(DataIntegrityViolationException ex, HttpServletRequest request) {
         return ResponseEntity.status(409).body(new ErrorResponse(409, "BOOK_CONFLICT", "Book data conflicts with an existing record",
             null, Map.of(), Instant.now(), trace(request)));
+    }
+
+    @ExceptionHandler(catalogservice.exception.PublisherException.class)
+    public ResponseEntity<ErrorResponse> auth(catalogservice.exception.PublisherException ex, HttpServletRequest request) {
+        return ResponseEntity.status(ex.status()).body(new ErrorResponse(ex.status().value(), ex.code(),
+            ex.getMessage(), null, Map.of(), Instant.now(), trace(request)));
     }
 
     private String trace(HttpServletRequest request) {

@@ -25,6 +25,8 @@ public class CirculationOutboxPublisher {
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final int maxRetries;
+    @Value("${app.kafka.enabled:false}")
+    private boolean kafkaEnabled;
 
     public CirculationOutboxPublisher(
             CirculationOutboxRepository outbox,
@@ -42,6 +44,7 @@ public class CirculationOutboxPublisher {
 
     @Scheduled(fixedDelayString = "${app.circulation.outbox-poll-ms:5000}")
     public void scheduledPublish() {
+        if (!kafkaEnabled) return;
         publishPendingBatch(50);
     }
 

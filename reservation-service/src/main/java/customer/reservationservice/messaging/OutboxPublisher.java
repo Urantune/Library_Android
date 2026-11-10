@@ -30,6 +30,8 @@ public class OutboxPublisher {
     private final Clock clock;
     private final int maxRetries;
     private final boolean jobsEnabled;
+    @Value("${app.kafka.enabled:false}")
+    private boolean kafkaEnabled;
 
     public OutboxPublisher(
             OutboxEventRepository outboxEvents,
@@ -49,7 +51,7 @@ public class OutboxPublisher {
 
     @Scheduled(fixedDelayString = "${app.reservation.outbox-poll-ms:5000}")
     public void scheduledPublish() {
-        if (!jobsEnabled) {
+        if (!jobsEnabled || !kafkaEnabled) {
             return;
         }
         publishPendingBatch(50);

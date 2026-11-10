@@ -20,7 +20,7 @@ public class UserRepository {
 
     public List<UserRow> findAll(String query, int offset, int size) {
         String match = "%" + query.toLowerCase() + "%";
-        return jdbc.query("SELECT u.id, u.username, u.email, u.full_name, u.phone, u.status, u.created_at, u.updated_at, COALESCE((SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=u.id LIMIT 1),'MEMBER') role FROM users u WHERE (lower(COALESCE(u.username,'')) LIKE ? OR lower(u.email) LIKE ? OR lower(u.full_name) LIKE ?) AND u.status <> 'INACTIVE' ORDER BY u.created_at DESC LIMIT ? OFFSET ?",
+        return jdbc.query("SELECT u.id, u.username, u.email, u.full_name, u.phone, u.status, u.created_at, u.updated_at, COALESCE((SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=u.id ORDER BY CASE WHEN r.code='ADMIN' THEN 0 ELSE 1 END LIMIT 1),'USER') role FROM users u WHERE (lower(COALESCE(u.username,'')) LIKE ? OR lower(u.email) LIKE ? OR lower(u.full_name) LIKE ?) AND u.status <> 'INACTIVE' ORDER BY u.created_at DESC LIMIT ? OFFSET ?",
                 mapper, match, match, match, size, offset);
     }
 
@@ -30,7 +30,7 @@ public class UserRepository {
     }
 
     public Optional<UserRow> findById(String id) {
-        return jdbc.query("SELECT u.id, u.username, u.email, u.full_name, u.phone, u.status, u.created_at, u.updated_at, COALESCE((SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=u.id LIMIT 1),'MEMBER') role FROM users u WHERE u.id=?", mapper, id).stream().findFirst();
+        return jdbc.query("SELECT u.id, u.username, u.email, u.full_name, u.phone, u.status, u.created_at, u.updated_at, COALESCE((SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=u.id ORDER BY CASE WHEN r.code='ADMIN' THEN 0 ELSE 1 END LIMIT 1),'USER') role FROM users u WHERE u.id=?", mapper, id).stream().findFirst();
     }
 
     public boolean existsByEmail(String email, String exceptId) {

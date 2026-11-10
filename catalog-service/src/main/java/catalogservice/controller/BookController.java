@@ -1,11 +1,13 @@
 package catalogservice.controller;
 
+import catalogservice.config.PublisherAuthGuard;
 import catalogservice.dto.response.ApiResponse;
 import catalogservice.dto.response.BookResponse;
 import catalogservice.dto.response.PageResponse;
 import catalogservice.service.Impl.BookReadService;
 import catalogservice.service.Impl.BookWriteService;
 import catalogservice.dto.request.BookWriteRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import org.springframework.http.ResponseEntity;
@@ -21,10 +23,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class BookController {
     private final BookReadService service;
     private final BookWriteService writes;
+    private final PublisherAuthGuard authGuard;
 
-    public BookController(BookReadService service, BookWriteService writes) {
+    public BookController(BookReadService service, BookWriteService writes,
+        PublisherAuthGuard authGuard) {
         this.service = service;
         this.writes = writes;
+        this.authGuard = authGuard;
     }
 
     @GetMapping
@@ -36,8 +41,10 @@ public class BookController {
         @RequestParam(required = false) String publisherId,
         @RequestParam(required = false) String authorId,
         @RequestParam(required = false) String categoryId,
-        @RequestHeader(value = "X-Correlation-Id", required = false) String traceId
+        @RequestHeader(value = "X-Correlation-Id", required = false) String traceId,
+        HttpServletRequest request
     ) {
+        authGuard.authorizeRead(request);
         return ApiResponse.ok(service.list(page, size, q, publisherId, authorId, categoryId), trace(traceId));
     }
 
@@ -45,8 +52,10 @@ public class BookController {
     @Operation(summary = "Get a book by ID")
     public ApiResponse<BookResponse> detail(
         @PathVariable String id,
-        @RequestHeader(value = "X-Correlation-Id", required = false) String traceId
+        @RequestHeader(value = "X-Correlation-Id", required = false) String traceId,
+        HttpServletRequest request
     ) {
+        authGuard.authorizeRead(request);
         return ApiResponse.ok(service.detail(id), trace(traceId));
     }
 
@@ -56,8 +65,12 @@ public class BookController {
 
     @PostMapping
     @Operation(summary = "Create a book")
-    public ResponseEntity<ApiResponse<BookResponse>> create(@Valid @RequestBody BookWriteRequest request,
-        @RequestHeader(value = "X-Correlation-Id", required = false) String traceId) {
+    public ResponseEntity<ApiResponse<BookResponse>> create(
+        @Valid @RequestBody BookWriteRequest request,
+        @RequestHeader(value = "X-Correlation-Id", required = false) String traceId,
+        HttpServletRequest servletRequest
+    ) {
+        authGuard.authorizeBookWrite(servletRequest);
         var book = writes.create(request);
         return ResponseEntity.created(URI.create("/api/books/" + book.id()))
             .body(new ApiResponse<>(201, "Created", book, Instant.now(), trace(traceId)));
@@ -65,14 +78,23 @@ public class BookController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update book metadata")
-    public ApiResponse<BookResponse> update(@PathVariable String id, @Valid @RequestBody BookWriteRequest request,
-        @RequestHeader(value = "X-Correlation-Id", required = false) String traceId) {
+    public ApiResponse<BookResponse> update(
+        @PathVariable String id,
+        @Valid @RequestBody BookWriteRequest request,
+        @RequestHeader(value = "X-Correlation-Id", required = false) String traceId,
+        HttpServletRequest servletRequest
+    ) {
+        authGuard.authorizeBookWrite(servletRequest);
         return ApiResponse.ok(writes.update(id, request), trace(traceId));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Soft-delete a book")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    public ResponseEntity<Void> delete(
+        @PathVariable String id,
+        HttpServletRequest request
+    ) {
+        authGuard.authorizeBookWrite(request);
         writes.deactivate(id);
         return ResponseEntity.noContent().build();
     }

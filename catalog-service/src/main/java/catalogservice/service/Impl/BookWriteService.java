@@ -1,15 +1,19 @@
 package catalogservice.service.Impl;
 
+import catalogservice.Categories.repository.CategoryRepository;
 import catalogservice.dto.response.BookResponse;
 import catalogservice.dto.request.BookWriteRequest;
 import catalogservice.mapper.BookMapper;
 import catalogservice.entity.Book;
 import catalogservice.enums.BookStatus;
+import catalogservice.repository.AuthorRepository;
 import catalogservice.repository.BookRepository;
+import catalogservice.repository.PublisherRepository;
 import java.time.Year;
 import java.time.ZoneOffset;
 
 import catalogservice.exception.BookWriteException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,10 +25,27 @@ import org.springframework.web.server.ResponseStatusException;
 public class BookWriteService {
     private final BookRepository books;
     private final BookMapper mapper;
+    private final PublisherRepository publishers;
+    private final AuthorRepository authors;
+    private final CategoryRepository categories;
 
     public BookWriteService(BookRepository books, BookMapper mapper) {
+        this(books, mapper, null, null, null);
+    }
+
+    @Autowired
+    public BookWriteService(
+        BookRepository books,
+        BookMapper mapper,
+        @Autowired(required = false) PublisherRepository publishers,
+        @Autowired(required = false) AuthorRepository authors,
+        @Autowired(required = false) CategoryRepository categories
+    ) {
         this.books = books;
         this.mapper = mapper;
+        this.publishers = publishers;
+        this.authors = authors;
+        this.categories = categories;
     }
 
     @Transactional
@@ -57,12 +78,50 @@ public class BookWriteService {
     }
 
     private void apply(BookWriteRequest request, Book book) {
-        if ((request.publisherId() != null && !request.publisherId().isBlank())
-            || (request.authorIds() != null && !request.authorIds().isEmpty())
-            || (request.categoryIds() != null && !request.categoryIds().isEmpty())) {
-            throw new BookWriteException(HttpStatus.CONFLICT, "RELATION_NOT_READY", "relations",
-                "Related modules are not ready; use null or empty references");
+        if (request.publisherId() != null && !request.publisherId().isBlank()) {
+            if (publishers == null || !publishers.existsById(request.publisherId().trim())) {
+                throw new BookWriteException(HttpStatus.CONFLICT, "RELATION_NOT_READY", "relations",
+                    "Related modules are not ready; use null or empty references");
+            }
+            book.setPublisherId(request.publisherId().trim());
+            book.setPublisher(publishers.findById(request.publisherId().trim()).orElseThrow());
+        } else {
+            book.setPublisherId(null);
+            book.setPublisher(null);
         }
+
+        if (request.authorIds() != null && !request.authorIds().isEmpty()) {
+            if (authors == null) {
+                throw new BookWriteException(HttpStatus.CONFLICT, "RELATION_NOT_READY", "relations",
+                    "Related modules are not ready; use null or empty references");
+            }
+            var authorList = authors.findAllById(request.authorIds());
+            if (authorList.size() != request.authorIds().size()) {
+                throw new BookWriteException(HttpStatus.CONFLICT, "RELATION_NOT_READY", "relations",
+                    "Related modules are not ready; use null or empty references");
+            }
+            book.getAuthors().clear();
+            book.getAuthors().addAll(authorList);
+        } else if (request.authorIds() != null) {
+            book.getAuthors().clear();
+        }
+
+        if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
+            if (categories == null) {
+                throw new BookWriteException(HttpStatus.CONFLICT, "RELATION_NOT_READY", "relations",
+                    "Related modules are not ready; use null or empty references");
+            }
+            var categoryList = categories.findAllById(request.categoryIds());
+            if (categoryList.size() != request.categoryIds().size()) {
+                throw new BookWriteException(HttpStatus.CONFLICT, "RELATION_NOT_READY", "relations",
+                    "Related modules are not ready; use null or empty references");
+            }
+            book.getCategories().clear();
+            book.getCategories().addAll(categoryList);
+        } else if (request.categoryIds() != null) {
+            book.getCategories().clear();
+        }
+
         String isbn = request.isbn().replaceAll("[\\s-]", "").toUpperCase(java.util.Locale.ROOT);
         if (isbn.isBlank()) throw invalid("isbn", "ISBN is required");
         books.findByIsbn(isbn).ifPresent(existing -> {
@@ -83,9 +142,9 @@ public class BookWriteService {
         book.setIsbn(isbn);
         book.setDescription(request.description());
         book.setPublicationYear(request.publicationYear());
-        book.setLanguage(request.language());
-        book.setPageCount(request.pageCount());
-        book.setCoverUrl(request.coverUrl());
+        if (request.language() != null) book.setLanguage(request.language());
+        if (request.pageCount() != null) book.setPageCount(request.pageCount());
+        if (request.coverUrl() != null) book.setCoverUrl(request.coverUrl());
         book.setStatus(status);
     }
 

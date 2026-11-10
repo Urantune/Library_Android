@@ -12,7 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class UserService {
-    private static final Set<String> ROLES = Set.of("MEMBER", "LIBRARIAN", "ADMIN");
+    private static final Set<String> ROLES = Set.of("USER", "ADMIN");
     private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private final UserRepository users;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -86,9 +86,8 @@ public class UserService {
     }
 
     private String normalizeRole(String role) {
-        if ("USER".equalsIgnoreCase(role)) return "MEMBER";
-        if ("STAFF".equalsIgnoreCase(role)) return "LIBRARIAN";
-        return role == null ? "MEMBER" : role.toUpperCase(Locale.ROOT);
+        if ("MEMBER".equalsIgnoreCase(role)) return "USER";
+        return role == null ? "USER" : role.toUpperCase(Locale.ROOT);
     }
 
     private boolean blank(String value) { return value == null || value.isBlank(); }

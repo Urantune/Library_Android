@@ -2,6 +2,7 @@ package catalogservice.entity;
 
 import catalogservice.enums.BookConditionStatus;
 import catalogservice.enums.BookCopyStatus;
+import catalogservice.persistence.UtcTimestampConverter;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -20,7 +21,8 @@ public class BookCopy extends TimestampedEntity {
     @Column(name = "holder_type", columnDefinition = "TEXT") private String holderType;
     @Column(name = "holder_id", columnDefinition = "TEXT") private String holderId;
     @Column(name = "aggregate_version", nullable = false) private long aggregateVersion = 1;
-    @Column(name = "acquired_at", columnDefinition = "DATETIME") private LocalDateTime acquiredAt;
+    @Convert(converter = UtcTimestampConverter.class)
+    @Column(name = "acquired_at", columnDefinition = "TEXT") private LocalDateTime acquiredAt;
     public String getId() { return id; }
     public Book getBook() { return book; }
     public void setBook(Book book) { this.book = book; }

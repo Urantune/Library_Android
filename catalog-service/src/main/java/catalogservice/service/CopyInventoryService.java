@@ -180,7 +180,7 @@ public class CopyInventoryService {
         cacheInvalidator.evictBookCachesAfterCommit();
     }
 
-    private void enqueueCopyAvailable(String bookId, String copyId, String reason, String traceId, long version) {
+    void enqueueCopyAvailable(String bookId, String copyId, String reason, String traceId, long version) {
         String occurredAt = now();
         String eventTrace = traceId == null || !traceId.matches("[a-zA-Z0-9-]{1,64}")
                 ? UUID.randomUUID().toString()
