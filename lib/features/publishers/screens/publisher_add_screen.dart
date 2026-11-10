@@ -6,7 +6,8 @@ import '../services/publisher_service.dart';
 /// Nguyen Duy Khang - CE192012
 /// Màn hình biểu mẫu thêm mới (PRM-024) và cập nhật thông tin nhà xuất bản (PRM-025)
 class PublisherAddScreen extends StatefulWidget {
-  final Publisher? publisher; // Đối tượng nhà xuất bản (nếu null là Thêm mới - PRM-024, nếu có là Cập nhật - PRM-025)
+  final Publisher?
+      publisher; // Đối tượng nhà xuất bản (nếu null là Thêm mới - PRM-024, nếu có là Cập nhật - PRM-025)
 
   const PublisherAddScreen({super.key, this.publisher});
 
@@ -38,8 +39,10 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
     super.initState();
     // Khởi tạo các ô nhập liệu (nếu ở chế độ Cập nhật thì điền sẵn thông tin cũ của nhà xuất bản)
     _nameController = TextEditingController(text: widget.publisher?.name ?? '');
-    _emailController = TextEditingController(text: widget.publisher?.email ?? '');
-    _phoneController = TextEditingController(text: widget.publisher?.phone ?? '');
+    _emailController =
+        TextEditingController(text: widget.publisher?.email ?? '');
+    _phoneController =
+        TextEditingController(text: widget.publisher?.phone ?? '');
     _addressController =
         TextEditingController(text: widget.publisher?.address ?? '');
     _websiteController =
@@ -74,6 +77,10 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
           phone: _phoneController.text.trim(),
           email: _emailController.text.trim(),
           website: _websiteController.text.trim(),
+          // PUT thay toàn bộ dữ liệu, vì vậy phải gửi lại trạng thái hiện tại.
+          status: widget.publisher!.status.isEmpty
+              ? 'ACTIVE'
+              : widget.publisher!.status,
         );
       } else {
         // PRM-024: Gọi API POST /api/publishers để tạo mới nhà xuất bản
@@ -83,6 +90,7 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
           phone: _phoneController.text.trim(),
           email: _emailController.text.trim(),
           website: _websiteController.text.trim(),
+          status: 'ACTIVE',
         );
       }
 
@@ -151,7 +159,8 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                 children: [
                   _buildSectionCard(
                     children: [
@@ -314,9 +323,12 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
                             child: SizedBox(
                               height: 48,
                               child: OutlinedButton(
-                                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                                onPressed: _isSaving
+                                    ? null
+                                    : () => Navigator.of(context).pop(),
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  side: const BorderSide(
+                                      color: Color(0xFFCBD5E1)),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
@@ -363,7 +375,9 @@ class _PublisherAddScreenState extends State<PublisherAddScreen> {
                                 label: Text(
                                   _isSaving
                                       ? 'Đang lưu...'
-                                      : (isEditing ? 'Lưu thay đổi' : 'Lưu nhà xuất bản'),
+                                      : (isEditing
+                                          ? 'Lưu thay đổi'
+                                          : 'Lưu nhà xuất bản'),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,

@@ -47,6 +47,7 @@ class Publisher {
       if (phone.trim().isNotEmpty) 'phone': phone.trim(),
       if (email.trim().isNotEmpty) 'email': email.trim(),
       if (website.trim().isNotEmpty) 'website': website.trim(),
+      'status': status.trim().isEmpty ? 'ACTIVE' : status.trim(),
     };
   }
 

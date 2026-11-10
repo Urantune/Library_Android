@@ -23,7 +23,8 @@ class PublisherDeleteDialog extends StatelessWidget {
       insetPadding: const EdgeInsets.symmetric(horizontal: 20),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
-          maxWidth: 360, // Khống chế độ rộng vừa vặn, không bị bè to trên desktop
+          maxWidth:
+              360, // Khống chế độ rộng vừa vặn, không bị bè to trên desktop
         ),
         child: Padding(
           padding: const EdgeInsets.all(22),
@@ -67,7 +68,8 @@ class PublisherDeleteDialog extends StatelessWidget {
                     height: 1.45,
                   ),
                   children: [
-                    const TextSpan(text: 'Bạn có chắc chắn muốn xóa nhà xuất bản\n'),
+                    const TextSpan(
+                        text: 'Bạn có chắc chắn muốn xóa nhà xuất bản\n'),
                     TextSpan(
                       text: '"${publisher.name}"',
                       style: const TextStyle(

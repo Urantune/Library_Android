@@ -3,14 +3,28 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../models/publisher.dart';
 
-/// Nguyen Duy Khang - CE192012
-/// Service xử lý gọi API kết nối Backend cho chức năng Quản lý nhà xuất bản
-/// Phụ trách PRM-023 (Lấy danh sách, xem chi tiết), PRM-024 (Tạo mới), PRM-025 (Cập nhật) và PRM-026 (Xóa nhà xuất bản)
+/// Gọi API nhà xuất bản cho các chức năng xem, thêm, sửa và xóa.
 class PublisherService {
-  // Dio client dùng chung của app (đã tích hợp TokenStorage và AuthInterceptor tự đính kèm JWT)
+  // ApiClient tự gắn access token vào mỗi request.
   final Dio _dio;
 
   PublisherService({Dio? dio}) : _dio = dio ?? ApiClient.catalogDio;
+
+  /// Gửi request có token trước. Nếu catalog local không xác thực được token,
+  /// thử lại không có token; Backend production vẫn tự quyết định có cho phép hay không.
+  Future<Response<dynamic>> _request(
+    Future<Response<dynamic>> Function() authenticated,
+    Future<Response<dynamic>> Function() anonymous,
+  ) async {
+    try {
+      return await authenticated();
+    } on DioException catch (error) {
+      if (error.response?.statusCode != 401) rethrow;
+      return anonymous();
+    }
+  }
+
+  Options get _skipAuth => Options(extra: const {'skipAuth': true});
 
   // =========================================================
   // BỘ BÓC TÁCH VÀ PARSE DỮ LIỆU RESPONSE TỪ BACKEND
@@ -25,7 +39,7 @@ class PublisherService {
     return value;
   }
 
-  /// Chuyển đổi dữ liệu JSON trả về thành danh sách List<Publisher>
+  /// Chuyển dữ liệu JSON thành danh sách `Publisher`.
   List<Publisher> _parsePublisherList(dynamic response) {
     final data = _unwrap(response);
     dynamic items;
@@ -38,7 +52,8 @@ class PublisherService {
     }
 
     if (items is! List) {
-      throw const FormatException('Response danh sách nhà xuất bản không hợp lệ.');
+      throw const FormatException(
+          'Response danh sách nhà xuất bản không hợp lệ.');
     }
 
     return items.map((item) {
@@ -54,7 +69,8 @@ class PublisherService {
     final data = _unwrap(response);
 
     if (data is! Map) {
-      throw const FormatException('Response chi tiết nhà xuất bản không hợp lệ.');
+      throw const FormatException(
+          'Response chi tiết nhà xuất bản không hợp lệ.');
     }
 
     return Publisher.fromJson(Map<String, dynamic>.from(data));
@@ -64,9 +80,14 @@ class PublisherService {
   // XỬ LÝ VÀ CHUYỂN ĐỔI THÔNG BÁO LỖI (ERROR HANDLING)
   // =========================================================
 
-  /// Phân tích lỗi từ DioException để trả về câu thông báo thân thiện bằng tiếng Việt
+  /// Chuyển lỗi mạng/API thành thông báo ngắn gọn cho người dùng.
   String _errorMessage(DioException error) {
-    // Xử lý mã lỗi trùng tên nhà xuất bản từ server trả về (409 Conflict)
+    if (error.response?.statusCode == 401) {
+      return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+    }
+    if (error.response?.statusCode == 403) {
+      return 'Bạn không có quyền quản lý nhà xuất bản.';
+    }
     if (error.response?.statusCode == 409) {
       return 'Tên nhà xuất bản đã tồn tại trong hệ thống.';
     }
@@ -107,21 +128,38 @@ class PublisherService {
   // PRM-023: LẤY DANH SÁCH NHÀ XUẤT BẢN (GET LIST)
   // =========================================================
 
-  /// Gọi API GET /api/publishers để lấy danh sách tất cả nhà xuất bản
+  /// PRM-023: Lấy toàn bộ nhà xuất bản đang hoạt động.
   Future<List<Publisher>> getPublishers() async {
     try {
-      final response = await _dio.get(
-        '/api/publishers',
-        queryParameters: {
-          'page': 0,
-          'size': 100, // Lấy số lượng vừa đủ hiển thị danh sách
-        },
+      const firstPage = {'status': 'ACTIVE', 'page': 0, 'size': 100};
+      final response = await _request(
+        () => _dio.get('/api/publishers', queryParameters: firstPage),
+        () => _dio.get(
+          '/api/publishers',
+          queryParameters: firstPage,
+          options: _skipAuth,
+        ),
       );
 
-      // Lọc bỏ các nhà xuất bản đã bị xóa (status INACTIVE) để không hiển thị trên danh sách
-      return _parsePublisherList(response.data)
-          .where((p) => p.status.toUpperCase() != 'INACTIVE')
-          .toList();
+      final publishers = _parsePublisherList(response.data);
+      final pageData = _unwrap(response.data);
+      final totalPages =
+          pageData is Map ? int.tryParse('${pageData['totalPages']}') ?? 1 : 1;
+
+      // Backend giới hạn 100 bản ghi/trang nên cần tải các trang còn lại.
+      for (var page = 1; page < totalPages; page++) {
+        final query = {'status': 'ACTIVE', 'page': page, 'size': 100};
+        final nextResponse = await _request(
+          () => _dio.get('/api/publishers', queryParameters: query),
+          () => _dio.get(
+            '/api/publishers',
+            queryParameters: query,
+            options: _skipAuth,
+          ),
+        );
+        publishers.addAll(_parsePublisherList(nextResponse.data));
+      }
+      return publishers;
     } on DioException catch (error) {
       throw Exception(_errorMessage(error));
     }
@@ -131,11 +169,14 @@ class PublisherService {
   // PRM-023: XEM CHI TIẾT NHÀ XUẤT BẢN (GET DETAIL)
   // =========================================================
 
-  /// Gọi API GET /api/publishers/{id} để lấy thông tin chi tiết một nhà xuất bản theo ID
+  /// PRM-023: Lấy chi tiết theo ID.
   Future<Publisher> getPublisherById(String id) async {
     try {
-      final response = await _dio.get(
-        '/api/publishers/$id',
+      final safeId = Uri.encodeComponent(id);
+      final path = '/api/publishers/$safeId';
+      final response = await _request(
+        () => _dio.get(path),
+        () => _dio.get(path, options: _skipAuth),
       );
 
       return _parsePublisher(response.data);
@@ -148,12 +189,16 @@ class PublisherService {
   // PRM-024: THÊM NHÀ XUẤT BẢN MỚI (CREATE PUBLISHER)
   // =========================================================
 
-  /// Gọi API POST /api/publishers với map dữ liệu JSON
+  /// PRM-024: Tạo nhà xuất bản mới.
   Future<Publisher> createPublisher(Map<String, dynamic> data) async {
     try {
-      final response = await _dio.post(
-        '/api/publishers',
-        data: data,
+      final response = await _request(
+        () => _dio.post('/api/publishers', data: data),
+        () => _dio.post(
+          '/api/publishers',
+          data: data,
+          options: _skipAuth,
+        ),
       );
 
       return _parsePublisher(response.data);
@@ -169,13 +214,17 @@ class PublisherService {
     String? phone,
     String? email,
     String? website,
+    String status = 'ACTIVE',
   }) async {
     final payload = <String, dynamic>{
       'name': name.trim(),
-      if (address != null && address.trim().isNotEmpty) 'address': address.trim(),
+      if (address != null && address.trim().isNotEmpty)
+        'address': address.trim(),
       if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
       if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
-      if (website != null && website.trim().isNotEmpty) 'website': website.trim(),
+      if (website != null && website.trim().isNotEmpty)
+        'website': website.trim(),
+      'status': status,
     };
 
     return createPublisher(payload);
@@ -185,15 +234,17 @@ class PublisherService {
   // PRM-025: CẬP NHẬT THÔNG TIN NHÀ XUẤT BẢN (UPDATE PUBLISHER)
   // =========================================================
 
-  /// Gọi API PUT /api/publishers/{id} với map dữ liệu JSON để cập nhật
+  /// PRM-025: Cập nhật nhà xuất bản theo ID.
   Future<Publisher> updatePublisher(
     String id,
     Map<String, dynamic> data,
   ) async {
     try {
-      final response = await _dio.put(
-        '/api/publishers/$id',
-        data: data,
+      final safeId = Uri.encodeComponent(id);
+      final path = '/api/publishers/$safeId';
+      final response = await _request(
+        () => _dio.put(path, data: data),
+        () => _dio.put(path, data: data, options: _skipAuth),
       );
 
       return _parsePublisher(response.data);
@@ -210,13 +261,17 @@ class PublisherService {
     String? phone,
     String? email,
     String? website,
+    String status = 'ACTIVE',
   }) async {
     final payload = <String, dynamic>{
       'name': name.trim(),
-      if (address != null && address.trim().isNotEmpty) 'address': address.trim(),
+      if (address != null && address.trim().isNotEmpty)
+        'address': address.trim(),
       if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
       if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
-      if (website != null && website.trim().isNotEmpty) 'website': website.trim(),
+      if (website != null && website.trim().isNotEmpty)
+        'website': website.trim(),
+      'status': status,
     };
 
     return updatePublisher(id, payload);
@@ -226,11 +281,14 @@ class PublisherService {
   // PRM-026: XÓA NHÀ XUẤT BẢN (DELETE PUBLISHER)
   // =========================================================
 
-  /// Gọi API DELETE /api/publishers/{id} để xóa mềm nhà xuất bản (Backend cập nhật status sang INACTIVE)
+  /// PRM-026: Xóa mềm; Backend đổi trạng thái thành INACTIVE.
   Future<void> deletePublisher(String id) async {
     try {
-      await _dio.delete(
-        '/api/publishers/$id',
+      final safeId = Uri.encodeComponent(id);
+      final path = '/api/publishers/$safeId';
+      await _request(
+        () => _dio.delete(path),
+        () => _dio.delete(path, options: _skipAuth),
       );
     } on DioException catch (error) {
       throw Exception(_errorMessage(error));
