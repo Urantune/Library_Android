@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/book.dart';
 import '../providers/book_provider.dart';
 import 'book_add_screen.dart';
+import '../widgets/book_copies_section.dart';
 
 class BookDetailScreen extends ConsumerWidget {
   const BookDetailScreen({super.key, required this.bookId});
@@ -19,9 +20,19 @@ class BookDetailScreen extends ConsumerWidget {
         backgroundColor: Colors.white,
         actions: [
           bookAsync.maybeWhen(
-            data: (book) => IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => _edit(context, ref, book)),
+            data: (book) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                    tooltip: 'Sửa sách',
+                    icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                    onPressed: () => _edit(context, ref, book)),
+                IconButton(
+                    tooltip: 'Xóa sách',
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                    onPressed: () => _delete(context, ref, book)),
+              ],
+            ),
             orElse: () => const SizedBox.shrink(),
           ),
         ],
@@ -45,7 +56,10 @@ class BookDetailScreen extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(children: [
-                CircleAvatar(
+                if (book.coverUrl.isNotEmpty)
+                  ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(book.coverUrl, width: 100, height: 140, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.menu_book, size: 64)))
+                else CircleAvatar(
                     radius: 40,
                     backgroundColor: const Color(0xFFE6EDFF),
                     child: Text(
@@ -84,7 +98,10 @@ class BookDetailScreen extends ConsumerWidget {
                     _row('Thể loại', book.category),
                     _row('Nhà xuất bản', book.publisher),
                     _row('ISBN', book.isbn),
+                    _row('Mã đầu sách', book.id),
                     _row('Năm xuất bản', '${book.year}'),
+                    _row('Ngôn ngữ', book.language.isEmpty ? 'Chưa có' : book.language),
+                    _row('Số trang', book.pageCount?.toString() ?? 'Chưa có'),
                     _row('Số lượng', '${book.available}/${book.quantity}'),
                     if (book.description.isNotEmpty) ...[
                       const Divider(height: 28),
@@ -93,6 +110,8 @@ class BookDetailScreen extends ConsumerWidget {
                   ]),
             ),
           ),
+          const SizedBox(height: 16),
+          BookCopiesSection(bookId: bookId),
         ]),
       ),
     );
@@ -113,8 +132,45 @@ class BookDetailScreen extends ConsumerWidget {
     final updated = await Navigator.of(context).push<bool>(
         MaterialPageRoute(builder: (_) => BookAddScreen(book: book)));
     if (updated == true) {
+      ref.invalidate(bookPagedProvider);
       ref.invalidate(bookListProvider);
       ref.invalidate(bookDetailProvider(book.id));
+    }
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref, Book book) async {
+    final approved = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: const Text('Xác nhận xóa'),
+                content:
+                    Text('Bạn có chắc muốn xóa sách "${book.title}" không?'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Hủy')),
+                  FilledButton(
+                      style:
+                          FilledButton.styleFrom(backgroundColor: Colors.red),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Xóa'))
+                ]));
+    if (approved != true) return;
+    try {
+      await ref.read(bookRepositoryProvider).deleteBook(book.id);
+      ref.invalidate(bookPagedProvider);
+      ref.invalidate(bookListProvider);
+      ref.invalidate(bookDetailProvider(book.id));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Đã xóa sách.'), backgroundColor: Colors.green));
+        Navigator.pop(context, true);
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     }
   }
 }

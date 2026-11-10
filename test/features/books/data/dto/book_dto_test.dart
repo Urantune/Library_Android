@@ -26,6 +26,9 @@ void main() {
     expect(book.year, 2008);
     expect(book.quantity, 2);
     expect(book.available, 1);
+    expect(book.publisherId, 'p1');
+    expect(book.authorIds, ['a1']);
+    expect(book.categoryIds, ['c1']);
   });
 
   test('handles nullable relationships and optional values', () {

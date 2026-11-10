@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/book.dart';
-import '../../domain/entities/book_page.dart';
 import '../providers/book_provider.dart';
 import 'book_add_screen.dart';
 import 'book_detail_screen.dart';
@@ -21,7 +20,8 @@ class _BookListScreenState extends ConsumerState<BookListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final booksAsync = ref.watch(bookListProvider);
+    final pageQuery = BookQuery(page: _page, size: _pageSize, query: _keyword);
+    final pageAsync = ref.watch(bookPagedProvider(pageQuery));
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
@@ -36,7 +36,10 @@ class _BookListScreenState extends ConsumerState<BookListScreen> {
                   color: Color(0xFF3157B7))),
           IconButton(
               tooltip: 'Làm mới',
-              onPressed: () => ref.invalidate(bookListProvider),
+              onPressed: () {
+                ref.invalidate(bookPagedProvider);
+                ref.invalidate(bookListProvider);
+              },
               icon: const Icon(Icons.refresh)),
         ],
       ),
@@ -60,35 +63,37 @@ class _BookListScreenState extends ConsumerState<BookListScreen> {
           ),
         ),
         Expanded(
-          child: booksAsync.when(
+          child: pageAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => _ErrorState(
                 message: error.toString(),
-                onRetry: () => ref.invalidate(bookListProvider)),
-            data: (books) {
-              final result = BookPage.fromBooks(books,
-                  query: _keyword, page: _page, size: _pageSize);
-              final filtered = result.items;
-              if (filtered.isEmpty) {
+                onRetry: () {
+                  ref.invalidate(bookPagedProvider);
+                  ref.invalidate(bookListProvider);
+                }),
+            data: (result) {
+              final items = result.items;
+              if (items.isEmpty) {
                 return Center(
-                    child: Text(books.isEmpty
-                        ? 'Chưa có sách nào.'
-                        : 'Không tìm thấy sách phù hợp.'));
+                    child: Text(_keyword.isNotEmpty
+                        ? 'Không tìm thấy sách phù hợp.'
+                        : 'Chưa có sách nào.'));
               }
               return Column(children: [
                 Expanded(
                     child: RefreshIndicator(
                   onRefresh: () async {
+                    ref.invalidate(bookPagedProvider);
                     ref.invalidate(bookListProvider);
-                    await ref.read(bookListProvider.future);
+                    await ref.read(bookPagedProvider(pageQuery).future);
                   },
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                    itemCount: filtered.length,
+                    itemCount: items.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) =>
-                        _BookCard(book: filtered[index]),
+                        _BookCard(book: items[index]),
                   ),
                 )),
                 SafeArea(
@@ -126,6 +131,7 @@ class _BookListScreenState extends ConsumerState<BookListScreen> {
     final added = await Navigator.of(context)
         .push<bool>(MaterialPageRoute(builder: (_) => const BookAddScreen()));
     if (added == true && mounted) {
+      ref.invalidate(bookPagedProvider);
       ref.invalidate(bookListProvider);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Thêm sách thành công.'),
@@ -201,6 +207,7 @@ class _BookCard extends ConsumerWidget {
                       MaterialPageRoute(
                           builder: (_) => BookAddScreen(book: book)));
                   if (updated == true && context.mounted) {
+                    ref.invalidate(bookPagedProvider);
                     ref.invalidate(bookListProvider);
                   }
                 }),
@@ -235,6 +242,7 @@ class _BookCard extends ConsumerWidget {
     if (approved != true) return;
     try {
       await ref.read(bookRepositoryProvider).deleteBook(book.id);
+      ref.invalidate(bookPagedProvider);
       ref.invalidate(bookListProvider);
       ref.invalidate(bookDetailProvider(book.id));
       if (context.mounted) {

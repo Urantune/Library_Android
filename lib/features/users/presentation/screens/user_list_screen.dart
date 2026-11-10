@@ -91,7 +91,7 @@ class _UserListScreenState extends ConsumerState<UserListScreen> {
                           DropdownMenuItem(
                               value: 'ADMIN', child: Text('Quản trị viên')),
                           DropdownMenuItem(
-                              value: 'MEMBER', child: Text('Độc giả')),
+                              value: 'USER', child: Text('Độc giả')),
                         ],
                         onChanged: (value) =>
                             setState(() => roleFilter = value),

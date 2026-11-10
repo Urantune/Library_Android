@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import '../../../../core/config/api_config.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../models/loan_renewal_response.dart';
@@ -179,9 +179,7 @@ class LoanRemoteDataSource {
   static String get _defaultBaseUrl {
     const configured = String.fromEnvironment('LOANS_API_BASE_URL');
     if (configured.isNotEmpty) return configured;
-    return !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-        ? 'http://10.0.2.2:8083'
-        : 'http://localhost:8083';
+    return ApiConfig.baseUrl;
   }
 
   static String _formatDate(DateTime date) =>

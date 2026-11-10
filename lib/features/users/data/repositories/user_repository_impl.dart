@@ -2,7 +2,6 @@ import '../../domain/entities/user.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../datasources/user_local_data_source.dart';
 import '../datasources/user_remote_data_source.dart';
-import '../datasources/user_config.dart';
 
 class UserRepositoryImpl implements UserRepository {
   UserRepositoryImpl(this._localDataSource, {UserRemoteDataSource? remoteDataSource})
@@ -10,7 +9,7 @@ class UserRepositoryImpl implements UserRepository {
 
   final UserLocalDataSource _localDataSource;
   final UserRemoteDataSource? _remoteDataSource;
-  bool get _useRemote => UserConfig.useRemote && _remoteDataSource != null;
+  bool get _useRemote => _remoteDataSource != null;
 
   @override
   Future<List<User>> getUsers() => _useRemote ? _remoteDataSource!.getUsers() : _localDataSource.getUsers();

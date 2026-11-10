@@ -21,7 +21,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   late TextEditingController _fullNameController;
   late TextEditingController _phoneController;
   late TextEditingController _passwordController;
-  String _selectedRole = 'MEMBER';
+  String _selectedRole = 'USER';
   bool _isSubmitting = false;
 
   bool get isEditing => widget.user != null;
@@ -174,7 +174,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                           ),
                           items: const [
                             DropdownMenuItem(
-                                value: 'MEMBER', child: Text('Độc giả')),
+                                value: 'USER', child: Text('Độc giả')),
                             DropdownMenuItem(
                                 value: 'ADMIN', child: Text('Quản trị viên')),
                           ],
@@ -278,7 +278,6 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   }
 }
 
-/// Đưa mã vai trò (kể cả mã cũ USER/STAFF/LIBRARIAN) về đúng giá trị dropdown.
 String _roleValue(String? role) {
-  return (role ?? '').toUpperCase() == 'ADMIN' ? 'ADMIN' : 'MEMBER';
+  return (role ?? '').toUpperCase() == 'ADMIN' ? 'ADMIN' : 'USER';
 }

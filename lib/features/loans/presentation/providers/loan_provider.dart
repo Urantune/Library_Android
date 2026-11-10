@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../../../../core/config/api_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -58,9 +58,7 @@ final loanUserDetailsProvider =
   const configuredUrl = String.fromEnvironment('USER_API_BASE_URL');
   final baseUrl = configuredUrl.isNotEmpty
       ? configuredUrl
-      : !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-          ? 'http://10.0.2.2:8081'
-          : 'http://localhost:8081';
+      : ApiConfig.baseUrl;
   final dio = ApiClient.create(baseUrl: baseUrl);
   return UserRemoteDataSource(dio: dio).getUserById(userId);
 });
@@ -69,9 +67,7 @@ final loanBookListProvider = FutureProvider<List<Book>>((ref) {
   const configuredUrl = String.fromEnvironment('CATALOG_API_URL');
   final baseUrl = configuredUrl.isNotEmpty
       ? configuredUrl
-      : !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-          ? 'http://10.0.2.2:8082'
-          : 'http://localhost:8082';
+      : ApiConfig.baseUrl;
   final dio = ApiClient.create(baseUrl: baseUrl);
   return BookRemoteDataSource(dio).getBooks();
 });

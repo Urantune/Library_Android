@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../domain/entities/book.dart';
+import '../../domain/entities/book_page.dart';
 import '../dto/book_dto.dart';
 
 class BookRemoteDataSource {
@@ -26,6 +27,46 @@ class BookRemoteDataSource {
         .toList();
   }
 
+  Future<BookPage> getBookPage({
+    int page = 0,
+    int size = 10,
+    String? query,
+    String? publisherId,
+    String? authorId,
+    String? categoryId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/books',
+      queryParameters: {
+        'page': page,
+        'size': size,
+        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        if (publisherId != null && publisherId.trim().isNotEmpty) 'publisherId': publisherId.trim(),
+        if (authorId != null && authorId.trim().isNotEmpty) 'authorId': authorId.trim(),
+        if (categoryId != null && categoryId.trim().isNotEmpty) 'categoryId': categoryId.trim(),
+      },
+    );
+    final data = _dataMap(response.data);
+    final items = data['items'];
+    final bookList = (items is List)
+        ? items
+            .whereType<Map>()
+            .map((item) => BookDto(Map<String, dynamic>.from(item)).toDomain())
+            .toList()
+        : <Book>[];
+    final totalElements = (data['totalElements'] as num?)?.toInt() ?? bookList.length;
+    final totalPages = (data['totalPages'] as num?)?.toInt() ?? (totalElements == 0 ? 1 : (totalElements / size).ceil());
+    final currentPage = (data['page'] as num?)?.toInt() ?? page;
+
+    return BookPage(
+      items: bookList,
+      page: currentPage,
+      size: size,
+      totalElements: totalElements,
+      totalPages: totalPages == 0 && bookList.isNotEmpty ? 1 : totalPages,
+    );
+  }
+
   Future<Book> getBookById(String id) async {
     final response = await _dio.get<Map<String, dynamic>>('/api/books/$id');
     return BookDto(_dataMap(response.data)).toDomain();
@@ -48,11 +89,13 @@ class BookRemoteDataSource {
         'isbn': book.isbn,
         'description': book.description,
         'publicationYear': book.year == 0 ? null : book.year,
-        'pageCount': null,
-        'publisherId': null,
-        'authorIds': const [],
-        'categoryIds': const [],
-        'status': 'ACTIVE',
+        'pageCount': book.pageCount,
+        'language': book.language.isEmpty ? null : book.language,
+        'coverUrl': book.coverUrl.isEmpty ? null : book.coverUrl,
+        'publisherId': (book.publisherId == null || book.publisherId!.trim().isEmpty) ? null : book.publisherId!.trim(),
+        'authorIds': book.authorIds,
+        'categoryIds': book.categoryIds,
+        'status': book.status.isEmpty ? 'ACTIVE' : book.status,
       };
 
   Map<String, dynamic> _dataMap(Map<String, dynamic>? body) {

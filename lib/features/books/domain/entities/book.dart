@@ -10,7 +10,13 @@ class Book {
     required this.quantity,
     required this.available,
     this.description = '',
+    this.language = '',
+    this.coverUrl = '',
+    this.pageCount,
     this.status = 'ACTIVE',
+    this.publisherId,
+    this.authorIds = const [],
+    this.categoryIds = const [],
   });
 
   final String id;
@@ -23,7 +29,13 @@ class Book {
   final int quantity;
   final int available;
   final String description;
+  final String language;
+  final String coverUrl;
+  final int? pageCount;
   final String status;
+  final String? publisherId;
+  final List<String> authorIds;
+  final List<String> categoryIds;
 
   factory Book.fromJson(Map<String, dynamic> json) => Book(
         id: '${json['id'] ?? ''}',
@@ -36,7 +48,17 @@ class Book {
         quantity: (json['quantity'] as num?)?.toInt() ?? 0,
         available: (json['available'] as num?)?.toInt() ?? 0,
         description: '${json['description'] ?? ''}',
+        language: '${json['language'] ?? ''}',
+        coverUrl: '${json['coverUrl'] ?? ''}',
+        pageCount: (json['pageCount'] as num?)?.toInt(),
         status: '${json['status'] ?? 'ACTIVE'}',
+        publisherId: json['publisherId']?.toString(),
+        authorIds: (json['authorIds'] is List)
+            ? (json['authorIds'] as List).map((e) => e.toString()).toList()
+            : const [],
+        categoryIds: (json['categoryIds'] is List)
+            ? (json['categoryIds'] as List).map((e) => e.toString()).toList()
+            : const [],
       );
 
   Map<String, dynamic> toJson() => {
@@ -50,7 +72,13 @@ class Book {
         'quantity': quantity,
         'available': available,
         'description': description,
+        'language': language,
+        'coverUrl': coverUrl,
+        'pageCount': pageCount,
         'status': status,
+        'publisherId': publisherId,
+        'authorIds': authorIds,
+        'categoryIds': categoryIds,
       };
 
   Book copyWith({
@@ -63,7 +91,13 @@ class Book {
     int? quantity,
     int? available,
     String? description,
+    String? language,
+    String? coverUrl,
+    int? pageCount,
     String? status,
+    String? publisherId,
+    List<String>? authorIds,
+    List<String>? categoryIds,
   }) =>
       Book(
         id: id,
@@ -76,6 +110,12 @@ class Book {
         quantity: quantity ?? this.quantity,
         available: available ?? this.available,
         description: description ?? this.description,
+        language: language ?? this.language,
+        coverUrl: coverUrl ?? this.coverUrl,
+        pageCount: pageCount ?? this.pageCount,
         status: status ?? this.status,
+        publisherId: publisherId ?? this.publisherId,
+        authorIds: authorIds ?? this.authorIds,
+        categoryIds: categoryIds ?? this.categoryIds,
       );
 }

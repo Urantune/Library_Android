@@ -44,7 +44,7 @@ void main() {
       final user = User.fromJson(json);
 
       expect(user.fullName, 'Trần Thị B');
-      expect(user.role, 'MEMBER');
+      expect(user.role, 'ADMIN');
       expect(user.createdAt, isNotNull);
       expect(user.updatedAt, isNotNull);
     });
@@ -62,7 +62,7 @@ void main() {
 
       expect(user.fullName, '');
       expect(user.phone, isNull);
-      expect(user.role, 'MEMBER');
+      expect(user.role, 'USER');
       expect(user.createdAt, isNull);
       expect(user.updatedAt, isNull);
     });

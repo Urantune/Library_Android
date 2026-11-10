@@ -7,6 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lore_dungeo_library/app/app_router.dart';
 import 'package:lore_dungeo_library/app/library_app.dart';
+import 'package:lore_dungeo_library/app/providers/dashboard_provider.dart';
+import 'package:lore_dungeo_library/app/services/dashboard_service.dart';
+import 'package:lore_dungeo_library/features/loans/presentation/providers/loan_provider.dart';
+import 'package:lore_dungeo_library/features/loans/data/models/loan_response.dart';
 import 'package:lore_dungeo_library/features/sign/controllers/auth_controller.dart';
 import 'fake_auth_service.dart';
 
@@ -35,7 +39,12 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final service = FakeAuthService();
     await tester.pumpWidget(ProviderScope(
-        overrides: [authServiceProvider.overrideWithValue(service)],
+        overrides: [
+          authServiceProvider.overrideWithValue(service),
+          booksOverviewProvider.overrideWith((ref) async => const BooksOverview(total: 0, items: [])),
+          dashboardCountProvider.overrideWith((ref, metric) async => 0),
+          borrowedLoansProvider.overrideWith((ref, id) async => const PageDTO<LoanResponseDTO>(size: 0, page: 0, totalPages: 0, totalElements: 0, first: true, last: true, content: [])),
+        ],
         child: const RepaintBoundary(
             key: ValueKey('auth-preview'), child: LibraryApp())));
     await tester.pumpAndSettle();

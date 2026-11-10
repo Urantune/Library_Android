@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lore_dungeo_library/features/books/domain/entities/book.dart';
+import 'package:lore_dungeo_library/features/books/domain/entities/book_page.dart';
 import 'package:lore_dungeo_library/features/books/presentation/providers/book_provider.dart';
 import 'package:lore_dungeo_library/features/books/presentation/screens/book_list_screen.dart';
 
@@ -27,8 +28,10 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(ProviderScope(
       overrides: [
-        bookListProvider.overrideWith((ref) async => books),
+        bookPagedProvider.overrideWith((ref, query) async => BookPage.fromBooks(
+            books, query: query.query, page: query.page, size: query.size)),
         bookDetailProvider('0').overrideWith((ref) async => books.first),
+        bookCopiesProvider.overrideWith((ref, id) async => []),
       ],
       child: const MaterialApp(home: BookListScreen()),
     ));

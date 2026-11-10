@@ -18,6 +18,7 @@ class LibraryApp extends ConsumerWidget {
         title: 'Thư viện số',
         theme: ThemeData(
           useMaterial3: true,
+          fontFamilyFallback: const ['Segoe UI', 'Roboto', 'Arial'],
           scaffoldBackgroundColor: AppColors.background,
           colorSchemeSeed: AppColors.primary,
         ),

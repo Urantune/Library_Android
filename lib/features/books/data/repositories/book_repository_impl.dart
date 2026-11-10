@@ -1,44 +1,25 @@
-import 'package:dio/dio.dart';
-
 import '../../domain/entities/book.dart';
+import '../../domain/entities/book_page.dart';
 import '../../domain/repositories/book_repository.dart';
-import '../datasources/book_local_data_source.dart';
 import '../datasources/book_remote_data_source.dart';
 
 class BookRepositoryImpl implements BookRepository {
-  BookRepositoryImpl(this._local, {BookRemoteDataSource? remote}) : _remote = remote;
-  final BookLocalDataSource _local;
-  final BookRemoteDataSource? _remote;
-  @override
-  Future<List<Book>> getBooks() => _useRemote(
-        (remote) => remote.getBooks(),
-        _local.getBooks,
-      );
-  @override
-  Future<Book> getBookById(String id) => _useRemote(
-        (remote) => remote.getBookById(id),
-        () => _local.getBookById(id),
-      );
-  @override
-  Future<void> createBook(Book book) => _useRemote(
-        (remote) => remote.createBook(book).then((_) {}),
-        () => _local.createBook(book),
-      );
-  @override
-  Future<void> updateBook(Book book) => _useRemote(
-        (remote) => remote.updateBook(book).then((_) {}),
-        () => _local.updateBook(book),
-      );
-  @override
-  Future<void> deleteBook(String id) => _useRemote(
-        (remote) => remote.deleteBook(id),
-        () => _local.deleteBook(id),
-      );
+  BookRepositoryImpl(this._remote);
+  final BookRemoteDataSource _remote;
 
-  Future<T> _useRemote<T>(Future<T> Function(BookRemoteDataSource remote) online, Future<T> Function() offline) async {
-    final remote = _remote;
-    if (remote == null) return offline();
-    // Gọi remote trực tiếp — không fallback ngầm để lỗi mạng/API hiện rõ
-    return online(remote);
-  }
+  @override
+  Future<List<Book>> getBooks() => _remote.getBooks();
+  @override
+  Future<BookPage> getBookPage({int page = 0, int size = 10, String? query,
+      String? publisherId, String? authorId, String? categoryId}) =>
+      _remote.getBookPage(page: page, size: size, query: query,
+          publisherId: publisherId, authorId: authorId, categoryId: categoryId);
+  @override
+  Future<Book> getBookById(String id) => _remote.getBookById(id);
+  @override
+  Future<void> createBook(Book book) async { await _remote.createBook(book); }
+  @override
+  Future<void> updateBook(Book book) async { await _remote.updateBook(book); }
+  @override
+  Future<void> deleteBook(String id) => _remote.deleteBook(id);
 }
