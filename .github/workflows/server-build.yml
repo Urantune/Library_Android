@@ -1,6 +1,8 @@
 name: Server build
 
 on:
+  push:
+    branches: [Server]
   workflow_dispatch:
 
 permissions:
@@ -12,6 +14,7 @@ concurrency:
 
 jobs:
   verify:
+    if: github.ref == 'refs/heads/Server'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,4 +51,14 @@ jobs:
           release="/opt/library-server/releases/${GITHUB_SHA}"
           ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "mkdir -p '$release'"
           git archive --format=tar "$GITHUB_SHA" | ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "tar -xf - -C '$release'"
-          ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "cd '$release' && docker compose --parallel 1 build"
+          ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" bash -s -- "$release" <<'REMOTE'
+          set -eu
+          cd "$1"
+          for pair in discovery:discovery-service identity:identity-service catalog:catalog-service circulation:circulation-service reservation:reservation-service notification:notification-service gateway:api-gateway; do
+            name=${pair%%:*}
+            module=${pair#*:}
+            DOCKER_BUILDKIT=0 docker build --memory 600m --memory-swap 600m --build-arg "SERVICE=$module" -t "library-server/$name:latest" .
+          done
+          docker pull redis:7
+          docker pull apache/kafka:3.9.1
+          REMOTE

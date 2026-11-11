@@ -1,7 +1,7 @@
 FROM maven:3.9.12-eclipse-temurin-21 AS build
 WORKDIR /workspace
 COPY . .
-ENV MAVEN_OPTS="-Xmx512m"
+ENV MAVEN_OPTS="-Xmx256m"
 RUN mvn -B -DskipTests package
 ARG SERVICE
 RUN cp "${SERVICE}/target/${SERVICE}-"*.jar /app.jar

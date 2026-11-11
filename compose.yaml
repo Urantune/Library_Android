@@ -1,3 +1,5 @@
+name: library-server
+
 x-service: &service
   restart: unless-stopped
   environment: &service-env
@@ -47,6 +49,7 @@ services:
 
   discovery:
     <<: *service
+    image: library-server/discovery:latest
     build: {context: ., args: {SERVICE: discovery-service}}
     environment:
       SERVER_PORT: 8761
@@ -60,6 +63,7 @@ services:
 
   identity:
     <<: *service
+    image: library-server/identity:latest
     build: {context: ., args: {SERVICE: identity-service}}
     environment:
       <<: *service-env
@@ -74,6 +78,7 @@ services:
 
   catalog:
     <<: *service
+    image: library-server/catalog:latest
     build: {context: ., args: {SERVICE: catalog-service}}
     environment:
       <<: *service-env
@@ -92,6 +97,7 @@ services:
 
   circulation:
     <<: *service
+    image: library-server/circulation:latest
     build: {context: ., args: {SERVICE: circulation-service}}
     environment:
       <<: *service-env
@@ -108,6 +114,7 @@ services:
 
   reservation:
     <<: *service
+    image: library-server/reservation:latest
     build: {context: ., args: {SERVICE: reservation-service}}
     environment:
       <<: *service-env
@@ -125,6 +132,7 @@ services:
 
   notification:
     <<: *service
+    image: library-server/notification:latest
     build: {context: ., args: {SERVICE: notification-service}}
     environment:
       <<: *service-env
@@ -140,6 +148,7 @@ services:
 
   gateway:
     <<: *service
+    image: library-server/gateway:latest
     build: {context: ., args: {SERVICE: api-gateway}}
     environment:
       <<: *service-env
