@@ -89,6 +89,7 @@ class ReservationIntegrationTest {
     static final AtomicBoolean CATALOG_REVERSE_TRANSFER_FAIL = new AtomicBoolean(false);
     static final AtomicBoolean CIRCULATION_FAIL = new AtomicBoolean(false);
     static final AtomicBoolean KAFKA_SEND_FAIL = new AtomicBoolean(false);
+    static final AtomicBoolean KAFKA_DLT_FAIL = new AtomicBoolean(false);
     static final List<String> SENT_TOPICS = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     @TestConfiguration
@@ -169,6 +170,9 @@ class ReservationIntegrationTest {
                         if (KAFKA_SEND_FAIL.get() && !topic.endsWith(".dlt")) {
                             return CompletableFuture.failedFuture(new RuntimeException("Simulated broker timeout"));
                         }
+                        if (KAFKA_DLT_FAIL.get() && topic.endsWith(".dlt")) {
+                            return CompletableFuture.failedFuture(new RuntimeException("Simulated DLT outage"));
+                        }
                         SENT_TOPICS.add(topic);
                         ProducerRecord<String, String> prodRecord = new ProducerRecord<>(topic, key, value);
                         RecordMetadata meta = new RecordMetadata(new TopicPartition(topic, 0), 0L, 0, 0L, 0, 0);
@@ -221,7 +225,23 @@ class ReservationIntegrationTest {
         CATALOG_REVERSE_TRANSFER_FAIL.set(false);
         CIRCULATION_FAIL.set(false);
         KAFKA_SEND_FAIL.set(false);
+        KAFKA_DLT_FAIL.set(false);
         SENT_TOPICS.clear();
+    }
+
+    @Test
+    void retriesOutboxWhenBrokerAndDeadLetterAreUnavailable() {
+        jdbc.update("INSERT INTO outbox_events(id,aggregate_type,aggregate_id,event_type,payload,status,created_at,retry_count) VALUES('event-retry','RESERVATION','r1','library.reservation.ready.v1','{}','PENDING',?,1)", Instant.now().toString());
+        KAFKA_SEND_FAIL.set(true);
+        KAFKA_DLT_FAIL.set(true);
+        assertThat(outboxPublisher.publishPendingBatch(10)).isZero();
+        assertThat(jdbc.queryForObject("SELECT status FROM outbox_events WHERE id='event-retry'", String.class)).isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("SELECT retry_count FROM outbox_events WHERE id='event-retry'", Integer.class)).isEqualTo(2);
+        jdbc.update("UPDATE outbox_events SET next_attempt_at=NULL WHERE id='event-retry'");
+        KAFKA_SEND_FAIL.set(false);
+        KAFKA_DLT_FAIL.set(false);
+        assertThat(outboxPublisher.publishPendingBatch(10)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT status FROM outbox_events WHERE id='event-retry'", String.class)).isEqualTo("PUBLISHED");
     }
 
     @Test

@@ -97,21 +97,24 @@ public class OutboxPublisher {
         int nextAttempt = event.getRetryCount() + 1;
         Instant now = Instant.now(clock);
         boolean exhausted = nextAttempt >= maxRetries;
+        boolean forwarded = false;
 
         if (exhausted) {
             try {
                 kafkaOperations.send(targetTopic + ".dlt", event.getAggregateId(), event.getPayload())
                         .get(3, TimeUnit.SECONDS);
+                forwarded = true;
             } catch (Exception dltEx) {
                 log.error("Failed forwarding exhausted outbox event={} to DLT {}.dlt",
                         event.getId(), targetTopic, dltEx);
             }
         }
 
+        boolean deadLetterDelivered = forwarded;
         transactionTemplate.executeWithoutResult(tx -> outboxEvents.findById(event.getId()).ifPresent(row -> {
             row.setRetryCount(nextAttempt);
             row.setLastError(ex.getMessage());
-            if (exhausted) {
+            if (deadLetterDelivered) {
                 row.setStatus("FAILED");
                 row.setNextAttemptAt(null);
             } else {

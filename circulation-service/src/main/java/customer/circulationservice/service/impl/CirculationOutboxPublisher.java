@@ -76,18 +76,21 @@ public class CirculationOutboxPublisher {
     private void handleFailure(CirculationOutboxEvent event, Exception failure) {
         int retry = event.getRetryCount() + 1;
         Instant now = Instant.now(clock);
+        boolean forwarded = false;
         if (retry >= maxRetries) {
             try {
                 kafka.send(event.getEventType() + ".dlt", event.getAggregateId(), event.getPayload())
                         .get(3, TimeUnit.SECONDS);
+                forwarded = true;
             } catch (Exception dltFailure) {
                 log.error("Could not publish circulation outbox event {} to DLT", event.getId(), dltFailure);
             }
         }
+        boolean deadLetterDelivered = forwarded;
         transactions.executeWithoutResult(tx -> outbox.findById(event.getId()).ifPresent(row -> {
             row.setRetryCount(retry);
             row.setLastError(failure.getMessage());
-            if (retry >= maxRetries) {
+            if (deadLetterDelivered) {
                 row.setStatus("FAILED");
                 row.setNextAttemptAt(null);
             } else {
