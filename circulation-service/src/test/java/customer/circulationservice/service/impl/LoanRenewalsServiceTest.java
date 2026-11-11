@@ -33,10 +33,9 @@ class LoanRenewalsServiceTest {
 
     @Test
     void createsRenewalRequestForBorrowersOwnActiveLoan() {
-        String dueAt = Instant.now().plus(7, ChronoUnit.DAYS).toString();
+        String dueAt = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(7).toString();
         Loans loan = loan("loan-1", "reader-1", "BORROWED", dueAt);
         when(loansRepository.findById("loan-1")).thenReturn(Optional.of(loan));
-        when(renewalsRepository.existsByLoanIdAndStatus("loan-1", "REQUESTED")).thenReturn(false);
         when(renewalsRepository.save(any(LoanRenewals.class))).thenAnswer(
                 invocation -> invocation.getArgument(0));
         when(renewalsMapper.toResponse(any(LoanRenewals.class))).thenAnswer(invocation -> {
