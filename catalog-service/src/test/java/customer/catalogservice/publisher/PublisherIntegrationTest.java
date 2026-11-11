@@ -99,7 +99,7 @@ class PublisherIntegrationTest {
         jdbc.update("INSERT INTO books(id,isbn,title,status,created_at,updated_at) VALUES('b-1','9780132350884','Clean Code','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
         mvc.perform(get("/api/books")).andExpect(status().isOk());
         mvc.perform(get("/api/books/b-1")).andExpect(status().isOk());
-        assertThat(cacheManager.getCache("book-pages").get("0:20:null:null:null:null")).isNotNull();
+        assertThat(cacheManager.getCache("book-pages").get("0:20:null:null:null:null:null")).isNotNull();
         assertThat(cacheManager.getCache("book-details").get("b-1")).isNotNull();
 
         // MSS-025: POST create publisher -> 201 Created + Location + traceId
@@ -127,7 +127,7 @@ class PublisherIntegrationTest {
 
         String publisherId = JSON.readTree(createResp).path("data").path("id").asText();
         assertThat(UUID.fromString(publisherId)).isNotNull();
-        assertThat(cacheManager.getCache("book-pages").get("0:20:null:null:null:null")).isNull();
+        assertThat(cacheManager.getCache("book-pages").get("0:20:null:null:null:null:null")).isNull();
         assertThat(cacheManager.getCache("book-details").get("b-1")).isNull();
 
         // Duplicate name (case-insensitive) -> 409 Conflict
