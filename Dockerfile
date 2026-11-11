@@ -14,6 +14,6 @@ RUN apt-get update \
     && useradd -u 10001 -g app app
 WORKDIR /app
 COPY --from=build /app.jar app.jar
-RUN mkdir -p /app/data && chown -R app:app /app
+RUN mkdir -p /app/data/auth-keys && chown -R app:app /app
 USER app
 ENTRYPOINT ["java", "-jar", "app.jar"]

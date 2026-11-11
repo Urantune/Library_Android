@@ -1,0 +1,51 @@
+name: Server build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-vps-build
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build and test
+        run: mvn -B test
+      - name: Validate compose
+        run: docker compose config --quiet
+
+  build-images-on-vps:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Transfer source and build without starting containers
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -eu
+          release="/opt/library-server/releases/${GITHUB_SHA}"
+          ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "mkdir -p '$release'"
+          git archive --format=tar "$GITHUB_SHA" | ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "tar -xf - -C '$release'"
+          ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "cd '$release' && docker compose --parallel 1 build"
