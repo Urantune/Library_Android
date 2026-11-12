@@ -1,4 +1,4 @@
-name: library-server
+name: library-services
 
 x-service: &service
   restart: unless-stopped
@@ -7,46 +7,11 @@ x-service: &service
     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     KAFKA_ENABLED: "true"
     REDIS_HOST: redis
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+    MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
   networks: [library]
 
 services:
-  redis:
-    image: redis:7
-    restart: unless-stopped
-    command: redis-server --appendonly yes --appendfsync everysec
-    volumes: [redis-data:/data]
-    networks: [library]
-    healthcheck:
-      test: [CMD, redis-cli, ping]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  kafka:
-    image: apache/kafka:3.9.1
-    restart: unless-stopped
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
-      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
-    volumes: [kafka-data:/var/lib/kafka/data]
-    networks: [library]
-    healthcheck:
-      test: [CMD-SHELL, '/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1']
-      interval: 10s
-      timeout: 10s
-      retries: 18
-
   discovery:
     <<: *service
     image: library-server/discovery:latest
@@ -91,8 +56,6 @@ services:
       - auth-keys:/app/data/auth-keys:ro
     depends_on:
       identity: {condition: service_healthy}
-      kafka: {condition: service_healthy}
-      redis: {condition: service_healthy}
     healthcheck: *health
 
   circulation:
@@ -109,7 +72,6 @@ services:
       - auth-keys:/app/data/auth-keys:ro
     depends_on:
       identity: {condition: service_healthy}
-      kafka: {condition: service_healthy}
     healthcheck: *health
 
   reservation:
@@ -143,7 +105,6 @@ services:
       - auth-keys:/app/data/auth-keys:ro
     depends_on:
       identity: {condition: service_healthy}
-      kafka: {condition: service_healthy}
     healthcheck: *health
 
   gateway:
@@ -165,7 +126,7 @@ services:
 
 networks:
   library:
+    external: true
+    name: library-network
 volumes:
   auth-keys:
-  kafka-data:
-  redis-data:

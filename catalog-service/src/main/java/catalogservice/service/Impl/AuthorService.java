@@ -11,12 +11,15 @@ import catalogservice.exception.ErrorCode;
 import catalogservice.mapper.AuthorMapper;
 import catalogservice.repository.AuthorRepository;
 import catalogservice.service.IAuthorService;
+import catalogservice.service.PublisherCacheInvalidator;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
 public class AuthorService implements IAuthorService {
     AuthorRepository authorRepository;
     AuthorMapper authorMapper;
+    JdbcTemplate jdbc;
+    PublisherCacheInvalidator cacheInvalidator;
 
     @Override
     public PageDTO<AuthorResponse> getAuthors(
@@ -81,16 +86,22 @@ public class AuthorService implements IAuthorService {
     }
 
     @Override
+    @Transactional
     public AuthorResponse updateAuthor(String id, UpdateAuthor request) {
         Author author = authorRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
         authorMapper.updateAuthor(request, author);
         Author updateAuthor = authorRepository.save(author);
+        cacheInvalidator.evictBookCachesAfterCommit();
         return authorMapper.toAuthor(updateAuthor);
     }
 
     @Override
+    @Transactional
     public void deleteAuthor(String id) {
         Author author = authorRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+        jdbc.update("DELETE FROM book_authors WHERE author_id = ?", id);
         authorRepository.delete(author);
+        authorRepository.flush();
+        cacheInvalidator.evictBookCachesAfterCommit();
     }
 }

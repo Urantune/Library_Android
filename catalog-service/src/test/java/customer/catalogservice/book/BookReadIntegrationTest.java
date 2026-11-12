@@ -81,6 +81,16 @@ class BookReadIntegrationTest {
         jdbc.update("INSERT INTO book_copies(id,book_id,accession_code,condition,circulation_status,created_at,updated_at) VALUES('copy-2',?,'ACC-2','GOOD','BORROWED',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", ID);
     }
 
+    @Test
+    void deletesAuthorLinkedToBookWithoutDeletingBook() throws Exception {
+        jdbc.update("INSERT INTO authors(id,name,status,created_at,updated_at) VALUES('author-test','Test author','ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+        jdbc.update("INSERT INTO book_authors(book_id,author_id) VALUES(?, 'author-test')", ID);
+        mvc.perform(delete("/api/authors/author-test")).andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM book_authors WHERE author_id='author-test'", Integer.class));
+        org.junit.jupiter.api.Assertions.assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM books WHERE id=?", Integer.class, ID));
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM authors WHERE id='author-test'", Integer.class));
+    }
+
     private static String token(String role) throws Exception {
         var encoder = Base64.getUrlEncoder().withoutPadding();
         String header = encoder.encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));

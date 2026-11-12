@@ -49,9 +49,9 @@ jobs:
         run: |
           set -eu
           release="/opt/library-server/releases/${GITHUB_SHA}"
-          ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "mkdir -p '$release'"
-          git archive --format=tar "$GITHUB_SHA" | ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" "tar -xf - -C '$release'"
-          ssh -o BatchMode=yes "$VPS_USER@$VPS_HOST" bash -s -- "$release" <<'REMOTE'
+          ssh -p 2222 -o HostKeyAlias="$VPS_HOST" -o BatchMode=yes "$VPS_USER@$VPS_HOST" "mkdir -p '$release'"
+          git archive --format=tar "$GITHUB_SHA" | ssh -p 2222 -o HostKeyAlias="$VPS_HOST" -o BatchMode=yes "$VPS_USER@$VPS_HOST" "tar -xf - -C '$release'"
+          ssh -p 2222 -o HostKeyAlias="$VPS_HOST" -o BatchMode=yes "$VPS_USER@$VPS_HOST" bash -s -- "$release" <<'REMOTE'
           set -eu
           cd "$1"
           for pair in discovery:discovery-service identity:identity-service catalog:catalog-service circulation:circulation-service reservation:reservation-service notification:notification-service gateway:api-gateway; do
